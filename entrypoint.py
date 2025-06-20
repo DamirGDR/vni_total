@@ -67,7 +67,7 @@ def main():
         LEFT JOIN (
             SELECT 
                 DATE_FORMAT(t_trade.`date`, '%%Y-%%m-%%d') AS start_time,
-                sum(t_trade.account_pay_amount) AS vyruchka_s_abonementov
+                sum(t_trade.amount) AS vyruchka_s_abonementov
             FROM shamri.t_trade
             WHERE t_trade.`type` = 6 
                 AND t_trade.status = 1 
