@@ -1,34 +1,24 @@
-import pandas as pd
-import pymysql
-from sqlalchemy import create_engine
 import os
-import psycopg2 as pg
+
+import pandas as pd
+from sqlalchemy import create_engine
+
+# Секреты MySQL
 
 
-#Секреты MySQL
+def get_mysql_url() -> str:
+    url = os.environ["mysql_url"]
+    return url
 
 
-# Из окружения
-user_mysql = os.environ["user_mysql"]
-password_mysql = os.environ["password_mysql"]
-host_mysql = os.environ["host_mysql"]
-port_mysql = os.environ["port_mysql"]
-db_mysql = os.environ["db_mysql"]
+def get_postgres_url() -> str:
+    url = os.environ["postgres_url"]
+    return url
 
-
-# Секреты Postgres
-
-# Из окружения
-user_postgres = os.environ["user_postgres"]
-password_postgres = os.environ["password_postgres"]
-host_postgres = os.environ["host_postgres"]
-port_postgres = os.environ["port_postgres"]
-db_postgres = os.environ["db_postgres"]
 
 def main():
-
     # Выгрузка за сегодня из MySQL
-    select = '''
+    select = """
     WITH three_left_cols AS 
     (    
         SELECT 
@@ -393,14 +383,15 @@ def main():
     LEFT JOIN dolgi ON t_city_with_noname.start_day = dolgi.create_debit_date
     LEFT JOIN three_left_cols ON t_city_with_noname.start_day = three_left_cols.start_time
     WHERE t_city_with_noname.start_day = DATE_FORMAT(NOW(), '%%Y-%%m-%%d')
-    '''
+    """
 
-    engine_mysql = f"mysql+pymysql://{user_mysql}:{password_mysql}@{host_mysql}:{port_mysql}/{db_mysql}"
+    engine_mysql = create_engine(get_mysql_url())
     df_vni = pd.read_sql(select, engine_mysql)
 
     # Загрузка за сегодня в Postgres
-    engine_postgresql = create_engine(f"mysql+pymysql://{user_postgres}:{password_postgres}@{host_postgres}:{port_postgres}/{db_postgres}")
-    df_vni.to_sql('vni_total', engine_postgresql, if_exists='append', index=False)
+    engine_postgresql = create_engine(get_postgres_url())
+    df_vni.to_sql("vni_total", engine_postgresql, if_exists="append", index=False)
+
 
 if __name__ == "__main__":
     main()
