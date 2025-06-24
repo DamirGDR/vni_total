@@ -1,7 +1,7 @@
 import os
 
 import pandas as pd
-from sqlalchemy import create_engine
+import sqlalchemy as sa
 
 # Секреты MySQL
 
@@ -385,12 +385,19 @@ def main():
     WHERE t_city_with_noname.start_day = DATE_FORMAT(NOW(), '%%Y-%%m-%%d')
     """
 
-    engine_mysql = create_engine(get_mysql_url())
+    url = get_mysql_url()
+    url = sa.engine.make_url(url)
+    url = url.set(drivername="mysql+mysqlconnector")
+    engine_mysql = sa.create_engine(url)
     df_vni = pd.read_sql(select, engine_mysql)
 
     # Загрузка за сегодня в Postgres
-    engine_postgresql = create_engine(get_postgres_url())
-    df_vni.to_sql("vni_total", engine_postgresql, if_exists="append", index=False)
+    url = get_postgres_url()
+    url = sa.engine.make_url(url)
+    url = url.set(drivername="postgresql+psycopg")
+    engine_postgresql = sa.create_engine(url)
+    print(df_vni)
+    # df_vni.to_sql("vni_total", engine_postgresql, if_exists="append", index=False)
 
 
 if __name__ == "__main__":
