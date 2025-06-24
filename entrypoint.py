@@ -67,7 +67,7 @@ def main():
         LEFT JOIN (
             SELECT 
                 DATE_FORMAT(t_trade.`date`, '%%Y-%%m-%%d') AS start_time,
-                sum(t_trade.account_pay_amount) AS vyruchka_s_abonementov
+                sum(t_trade.amount) AS vyruchka_s_abonementov
             FROM shamri.t_trade
             WHERE t_trade.`type` = 6 
                 AND t_trade.status = 1 
@@ -133,7 +133,7 @@ def main():
             FROM t_trade
             WHERE t_trade.status=1 
                 AND t_trade.way=26 
-                AND t_trade.`type` IN (1,2,5,6,7) 
+                AND t_trade.`type` IN (1,2,6,7) 
             GROUP BY DATE_FORMAT(t_trade.`date`, '%%Y-%%m-%%d')
             ORDER BY DATE_FORMAT(t_trade.`date`, '%%Y-%%m-%%d') DESC) AS vyruchka_uspeh_payTabs
     ),
@@ -154,7 +154,7 @@ def main():
                 FROM t_trade
                 WHERE t_trade.status=1 
                     AND t_trade.way=26 
-                    AND t_trade.`type` IN (1,2,5,6,7) 
+                    AND t_trade.`type` IN (1,2,6,7) 
                 GROUP BY DATE_FORMAT(t_trade.`date`, '%%Y-%%m-%%d')
                 ORDER BY DATE_FORMAT(t_trade.`date`, '%%Y-%%m-%%d') DESC) AS vyruchka_uspeh_payTabs)
             AS vyruchka_uspeh_payTabs
@@ -396,7 +396,7 @@ def main():
     url = sa.engine.make_url(url)
     url = url.set(drivername="postgresql+psycopg")
     engine_postgresql = sa.create_engine(url)
-    df_vni.to_sql("vni_total", engine_postgresql, if_exists="append", index=False)
+    df_vni.to_sql("vni_total1", engine_postgresql, if_exists="append", index=False)
 
 
 if __name__ == "__main__":
