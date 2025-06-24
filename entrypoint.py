@@ -390,7 +390,7 @@ def main():
 
     # Загрузка за сегодня в Postgres
     engine_postgresql = create_engine(get_postgres_url())
-    df_vni.to_sql("vni_total", engine_postgresql, if_exists="append", index=False)
+    df_vni.to_sql("vni_total1", engine_postgresql, if_exists="append", index=False)
 
 
 if __name__ == "__main__":
