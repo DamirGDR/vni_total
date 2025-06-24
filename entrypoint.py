@@ -397,6 +397,8 @@ def main():
     url = url.set(drivername="postgresql+psycopg")
     engine_postgresql = sa.create_engine(url)
     df_vni.to_sql("vni_total1", engine_postgresql, if_exists="append", index=False)
+    
+    print('Got it!')
 
 
 if __name__ == "__main__":
