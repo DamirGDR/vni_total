@@ -395,7 +395,7 @@ def main():
     # Загрузка за сегодня в Postgres
     url = get_postgres_url()
     url = sa.engine.make_url(url)
-    url = url.set(drivername="postgresql+psycopg")
+    url = url.set(drivername="postgresql+psycopg2")
     engine_postgresql = sa.create_engine(url)
     df_vni.to_sql("newtable", engine_postgresql, if_exists="append", index=False)
     
