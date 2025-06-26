@@ -384,7 +384,9 @@ def main():
     LEFT JOIN three_left_cols ON t_city_with_noname.start_day = three_left_cols.start_time
     WHERE t_city_with_noname.start_day = DATE_FORMAT(NOW(), '%%Y-%%m-%%d')
     """
-    select1 = '''SELECT NOW()'''
+    select1 = '''
+    SELECT NOW() AS  'timestamp' 
+    '''
 
     url = get_mysql_url()
     url = sa.engine.make_url(url)
