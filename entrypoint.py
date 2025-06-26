@@ -384,19 +384,20 @@ def main():
     LEFT JOIN three_left_cols ON t_city_with_noname.start_day = three_left_cols.start_time
     WHERE t_city_with_noname.start_day = DATE_FORMAT(NOW(), '%%Y-%%m-%%d')
     """
+    select1 = '''SELECT NOW()'''
 
     url = get_mysql_url()
     url = sa.engine.make_url(url)
     url = url.set(drivername="mysql+mysqlconnector")
     engine_mysql = sa.create_engine(url)
-    df_vni = pd.read_sql(select, engine_mysql)
+    df_vni = pd.read_sql(select1, engine_mysql)
 
     # Загрузка за сегодня в Postgres
     url = get_postgres_url()
     url = sa.engine.make_url(url)
     url = url.set(drivername="postgresql+psycopg")
     engine_postgresql = sa.create_engine(url)
-    df_vni.to_sql("vni_total1", engine_postgresql, if_exists="append", index=False)
+    df_vni.to_sql("newtable", engine_postgresql, if_exists="append", index=False)
     
     print('Got it!')
 
