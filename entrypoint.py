@@ -184,8 +184,9 @@ def main():
             LEFT JOIN user_v_den_register ON three_left_cols.start_time = user_v_den_register.start_time
             LEFT JOIN kolichestvo_novyh_s_1_poezdkoy ON three_left_cols.start_time = kolichestvo_novyh_s_1_poezdkoy.start_date
             LEFT JOIN dolgi ON three_left_cols.start_time = dolgi.create_debit_date
-            WHERE DATE_FORMAT(NOW(), '%Y-%m-%d') = three_left_cols.start_time
+            -- WHERE DATE_FORMAT(NOW(), '%Y-%m-%d') = three_left_cols.start_time
             ORDER BY three_left_cols.start_time DESC
+            LIMIT 1
     """
     select1 = '''
     SELECT NOW() AS  'timestamp' 
