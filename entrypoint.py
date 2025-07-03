@@ -18,7 +18,7 @@ def get_postgres_url() -> str:
 
 def main():
     # Выгрузка за сегодня из MySQL
-    select = """
+    select_vni_total = """
                 -- Из Datalens
 -- ВНИ Общий
 WITH three_left_cols AS (
@@ -214,7 +214,7 @@ LIMIT 1
     url = sa.engine.make_url(url)
     url = url.set(drivername="mysql+mysqlconnector")
     engine_mysql = sa.create_engine(url)
-    df_vni = pd.read_sql(select, engine_mysql)
+    df_vni = pd.read_sql(select_vni_total, engine_mysql)
 
     # Загрузка за сегодня в Postgres
     url = get_postgres_url()
