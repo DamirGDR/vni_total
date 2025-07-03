@@ -209,6 +209,7 @@ LIMIT 1
     select1 = '''
     SELECT NOW() AS  'timestamp' 
     '''
+		
 
     url = get_mysql_url()
     url = sa.engine.make_url(url)
@@ -223,7 +224,7 @@ LIMIT 1
     engine_postgresql = sa.create_engine(url)
     df_vni.to_sql("vni_total", engine_postgresql, if_exists="append", index=False)
     
-    print('Got it!')
+    print('Got it: VNI_total')
 
 
 if __name__ == "__main__":
