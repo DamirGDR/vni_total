@@ -785,7 +785,7 @@ def main():
     truncate_vni_cities_for_graph = '''
     TRUNCATE TABLE vni_cities_for_graph
     '''
-    engine_postgresql.execute(sa_text(truncate_vni_cities_for_graph).execution_options(autocommit=True))
+    pd.read_sql('''DELETE FROM vni_cities_for_graph WHERE 1=1''', engine_postgresql)
 
     # Загрузка таблицы для графиков
     df_vni_cities_for_graph.to_sql("vni_cities_for_graph", engine_postgresql, if_exists="append", index=False)
