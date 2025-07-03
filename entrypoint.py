@@ -789,6 +789,7 @@ def main():
 
     # Загрузка таблицы для графиков
     df_vni_cities_for_graph.to_sql("vni_cities_for_graph", engine_postgresql, if_exists="append", index=False)
+	print('Table for graphs updated!')
 
 
 
