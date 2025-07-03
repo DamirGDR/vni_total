@@ -764,6 +764,7 @@ LIMIT 1
 	'''
 	df_cities = pd.read_sql(select_vni_cities, engine_mysql)
 	df_cities.to_sql("vni_cities", engine_postgresql, if_exists="append", index=False)
+	print('Got it: VNI_cities')
 
 if __name__ == "__main__":
     main()
