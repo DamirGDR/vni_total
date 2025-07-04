@@ -799,6 +799,7 @@ def main():
 
     # Копирую t_bike
     select_t_bike = '''	NOW() as 'timestamp',
+	NOW() as 'timestamp',
 	IFNULL(t_bike.id,0) AS id,
 	IFNULL(t_bike.number,0) AS number,
 	IFNULL(t_bike.imei,0) AS imei,
@@ -816,7 +817,7 @@ def main():
 	IFNULL(t_bike.version,0) AS version,
 	IFNULL(t_bike.version_time,0) AS version_time,
 	IFNULL(t_bike.readpack,0) AS readpack,
-	IFNULL(t_bike.add_date, '2024-01-01 00:00:00.000') AS add_date,
+	IFNULL(t_bike.add_date, STR_TO_DATE("2024-01-01 00:00:00", "%Y-%m-%d %H:%i:%s")) AS add_date,
 	IFNULL(t_bike.error_status,0) AS error_status,
 	IFNULL(t_bike.server_ip,'0.0.0.0') AS server_ip,
 	IFNULL(t_bike.bike_status,0) AS bike_status,
@@ -836,8 +837,8 @@ def main():
 	IFNULL(t_bike.protocol,0) AS protocol,
 	IFNULL(t_bike.frame_number,'empty') AS frame_number,
 	IFNULL(t_bike.battery_key,0) AS battery_key,
-	IFNULL(t_bike.release_time,'2024-01-01 00:00:00.000') AS release_time,
-	IFNULL(t_bike.last_service_time,'2024-01-01 00:00:00.000') AS last_service_time,
+	IFNULL(t_bike.release_time, STR_TO_DATE("2024-01-01 00:00:00", "%Y-%m-%d %H:%i:%s")) AS release_time,
+	IFNULL(t_bike.last_service_time, STR_TO_DATE("2024-01-01 00:00:00", "%Y-%m-%d %H:%i:%s")) AS last_service_time,
 	IFNULL(t_bike.industry_id,0) AS industry_id,
 	IFNULL(t_bike.ble_key,'empty') AS ble_key,
 	IFNULL(t_bike.user_group_id,0) AS user_group_id FROM shamri.t_bike'''
