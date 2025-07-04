@@ -787,7 +787,7 @@ def main():
     '''
 
     with engine_postgresql.connect() as conn:
-        result = conn.execute(text(truncate_vni_cities_for_graph))
+        result = conn.execute('TRUNCATE TABLE vni_cities_for_graph')
 
     # connection = engine_postgresql.connect()
     # connection.execute("TRUNCATE TABLE vni_cities_for_graph")
