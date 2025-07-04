@@ -787,24 +787,10 @@ def main():
 
     with engine_postgresql.connect() as connection:
         with connection.begin() as transaction:
-            print(f"Попытка очистить таблицу...")
+            print(f"Попытка очистить таблицу vni_cities_for_graph")
             connection.execute(sa.text(truncate_vni_cities_for_graph))
             # Если ошибок нет, транзакция фиксируется автоматически
-            print(f"Таблица успешно очищена.")
-
-
-    # with engine_postgresql.connect() as conn:
-    #     result = conn.execute(truncate_vni_cities_for_graph)
-
-    # connection = engine_postgresql.connect()
-    # connection.execute("TRUNCATE TABLE vni_cities_for_graph")
-    # connection.commit()
-
-    # with engine_postgresql.connect() as connection:
-    #     connection.execute(sa.text("TRUNCATE TABLE vni_cities_for_graph"))
-    #     connection.commit()
-    # engine_postgresql.execute(sa_text(truncate_vni_cities_for_graph).execution_options(autocommit=True))
-    # pd.read_sql('''DELETE FROM vni_cities_for_graph WHERE 1=1''', engine_postgresql)
+            print(f"Таблица vni_cities_for_graph успешно очищена.")
 
     # Загрузка таблицы для графиков
     df_vni_cities_for_graph.to_sql("vni_cities_for_graph", engine_postgresql, if_exists="append", index=False)
