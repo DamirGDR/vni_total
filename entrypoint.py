@@ -786,7 +786,7 @@ def main():
     TRUNCATE TABLE vni_cities_for_graph
     '''
     connection = engine_postgresql.connect()
-    connection.execute(truncate_vni_cities_for_graph)
+    connection.execute(text(truncate_vni_cities_for_graph))
     # engine_postgresql.execute(sa_text(truncate_vni_cities_for_graph).execution_options(autocommit=True))
     # pd.read_sql('''DELETE FROM vni_cities_for_graph WHERE 1=1''', engine_postgresql)
 
