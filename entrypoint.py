@@ -810,7 +810,7 @@ def main():
     #         print(f"Таблица vni_cities_for_graph успешно очищена.")
 
     # Загрузка t_bike
-    df_t_bike.to_sql("t_bike", engine_postgresql, if_exists="append", index=False)
+    df_t_bike.fillna(0).to_sql("t_bike", engine_postgresql, if_exists="append", index=False)
     print('Table for graphs t_bike!')
 
 
