@@ -798,7 +798,49 @@ def main():
     print('Table for graphs vni_cities_for_graph updated!')
 
     # Копирую t_bike
-    select_t_bike = '''SELECT NOW() as 'timestamp', t_bike.* FROM shamri.t_bike'''
+    select_t_bike = '''	NOW() as 'timestamp',
+	IFNULL(t_bike.id,0) AS id,
+	IFNULL(t_bike.number,0) AS number,
+	IFNULL(t_bike.imei,0) AS imei,
+	IFNULL(t_bike.type_id,0) AS type_id,
+	IFNULL(t_bike.g_time,0) AS g_time,
+	IFNULL(t_bike.g_lat,0) AS g_lat,
+	IFNULL(t_bike.g_lng,0) AS g_lng,
+	IFNULL(t_bike.status,0) AS status,
+	IFNULL(t_bike.use_status,0) AS use_status,
+	IFNULL(t_bike.power,0) AS power,
+	IFNULL(t_bike.gsm,0) AS gsm,
+	IFNULL(t_bike.gps_number,'empty') AS gps_number,
+	IFNULL(t_bike.city_id,0) AS city_id,
+	IFNULL(t_bike.heart_time,0) AS heart_time,
+	IFNULL(t_bike.version,0) AS version,
+	IFNULL(t_bike.version_time,0) AS version_time,
+	IFNULL(t_bike.readpack,0) AS readpack,
+	IFNULL(t_bike.add_date, '2024-01-01 00:00:00.000') AS add_date,
+	IFNULL(t_bike.error_status,0) AS error_status,
+	IFNULL(t_bike.server_ip,'0.0.0.0') AS server_ip,
+	IFNULL(t_bike.bike_status,0) AS bike_status,
+	IFNULL(t_bike.sponsors_id,0) AS sponsors_id,
+	IFNULL(t_bike.bike_no,0) AS bike_no,
+	IFNULL(t_bike.bike_type,0) AS bike_type,
+	IFNULL(t_bike.extend_info,0) AS extend_info,
+	IFNULL(t_bike.area_id,0) AS area_id,
+	IFNULL(t_bike.bike_power,0) AS bike_power,
+	IFNULL(t_bike.bike_power_status,0) AS bike_power_status,
+	IFNULL(t_bike.mac,0) AS mac,
+	IFNULL(t_bike.iccid,'empty') AS iccid,
+	IFNULL(t_bike.maintain_status,0) AS maintain_status,
+	IFNULL(t_bike.extra_lock_status,0) AS extra_lock_status,
+	IFNULL(t_bike.available,0) AS available,
+	IFNULL(t_bike.model,'empty') AS model,
+	IFNULL(t_bike.protocol,0) AS protocol,
+	IFNULL(t_bike.frame_number,'empty') AS frame_number,
+	IFNULL(t_bike.battery_key,0) AS battery_key,
+	IFNULL(t_bike.release_time,'2024-01-01 00:00:00.000') AS release_time,
+	IFNULL(t_bike.last_service_time,'2024-01-01 00:00:00.000') AS last_service_time,
+	IFNULL(t_bike.industry_id,0) AS industry_id,
+	IFNULL(t_bike.ble_key,'empty') AS ble_key,
+	IFNULL(t_bike.user_group_id,0) AS user_group_id FROM shamri.t_bike'''
     df_t_bike = pd.read_sql(select_t_bike, engine_mysql)
     # Очистка t_bike
 
@@ -810,7 +852,7 @@ def main():
     #         print(f"Таблица vni_cities_for_graph успешно очищена.")
 
     # Загрузка t_bike
-    df_t_bike.fillna(0).to_sql("t_bike", engine_postgresql, if_exists="append", index=False)
+    df_t_bike.to_sql("t_bike", engine_postgresql, if_exists="append", index=False)
     print('Table for graphs t_bike!')
 
 
