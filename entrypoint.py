@@ -798,7 +798,7 @@ def main():
     print('Table for graphs vni_cities_for_graph updated!')
 
     # Копирую t_bike
-    select_t_bike = '''	NOW() as 'timestamp',
+    select_t_bike = '''	SELECT
 	NOW() as 'timestamp',
 	IFNULL(t_bike.id,0) AS id,
 	IFNULL(t_bike.number,0) AS number,
