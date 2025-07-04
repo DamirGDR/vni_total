@@ -788,7 +788,7 @@ def main():
     with engine_postgresql.connect() as connection:
         with connection.begin() as transaction:
             print(f"Попытка очистить таблицу...")
-            connection.execute(truncate_vni_cities_for_graph)
+            connection.execute(sa.text(truncate_vni_cities_for_graph))
             # Если ошибок нет, транзакция фиксируется автоматически
             print(f"Таблица успешно очищена.")
 
