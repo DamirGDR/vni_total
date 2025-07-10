@@ -11,5 +11,6 @@ dependencies = [
     "sqlalchemy>=2.0.41",
     "google-api-python-client==2.144.0",
     "google-auth-oauthlib==1.2.1",
-    "google-cloud-iam==2.15.2"
+    "google-cloud-iam==2.15.2",
+    "gspread==5.4.0"
 ]
