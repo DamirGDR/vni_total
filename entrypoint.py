@@ -862,7 +862,7 @@ def main():
     	IFNULL(t_city.end_time,'00:24') AS end_time,
     	IFNULL(t_city.invite_code,'Empty') AS invite_code,
     	IFNULL(t_city.extend_info,'Empty') AS extend_info,
-    	IFNULL(t_city.industry_id,0) AS industry_id
+    	IFNULL(t_city.industry_id,0) AS industry_id FROM shamri.t_city
     '''
     df_t_city = pd.read_sql(select_t_city, engine_mysql)
 
