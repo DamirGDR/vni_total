@@ -1145,7 +1145,7 @@ def main():
     	t_bike.error_status
     '''
     df_h119 = pd.read_sql(select_h119, engine_mysql)
-    h119 = df_h119['vyveden_iz_ekspluatacii']
+    h119 = df_h119['vyveden_iz_ekspluatacii'].iloc[0]
 
     select_df2 = '''
         SELECT
@@ -1185,7 +1185,7 @@ def main():
         .merge(df3[['city_id', 'planovoye', 'Batteries V4.6', 'Batteries numbers V3 PRO']], on='city_id', how='left') \
         .fillna(0)
 
-    df.loc[df['city_id'] == 11, 'vyveden_iz_ekspluatacii'] = int(h119)
+    df.loc[df['city_id'] == 11, 'vyveden_iz_ekspluatacii'] = h119
     df['svobodnyh_akb'] = df['Batteries V4.6'] + df['Batteries numbers V3 PRO']
     df['skolko_nugno_akb'] = df['planovoye'] * df['akb_na_park_percent']
     df['skolko_dovesti_sim'] = df['planovoye'] - df['fact']
@@ -1234,14 +1234,14 @@ def main():
     df.loc[df['name'] == 'Total', 'itogo_sim'] = a1 + a2 + a3
     df['timestamp'] = pd.Timestamp.now()
     df = df.iloc[:, [21, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 14, 15, 16, 17, 18, 13, 19, 20, 11, 12]]
-    df.loc[df['city_id'] == 17, 'svobodnyh_akb'] = int(df.loc[df['city_id'] == 17, 'svobodnyh_akb']) + int(
-        df.loc[df['city_id'] == 12, 'svobodnyh_akb'])
-    df.loc[df['name'] == 'Total', 'svobodnyh_akb'] = int(df.loc[df['name'] == 'Total', 'svobodnyh_akb']) - int(
-        df.loc[df['city_id'] == 12, 'svobodnyh_akb'])
-    df.loc[df['city_id'] == 12, 'svobodnyh_akb'] = int(df.loc[df['city_id'] == 12, 'svobodnyh_akb']) + int(
-        df.loc[df['city_id'] == 12, 'v_ozhidanii_activacii']) + int(df.loc[df['city_id'] == 12, 'remont'])
-    df.loc[df['city_id'] == 11, 'svobodnyh_akb'] = int(df.loc[df['city_id'] == 11, 'svobodnyh_akb']) + int(
-        df.loc[df['city_id'] == 11, 'v_ozhidanii_activacii']) + int(df.loc[df['city_id'] == 11, 'remont'])
+    df.loc[df['city_id'] == 17, 'svobodnyh_akb'] = int(df.loc[df['city_id'] == 17, 'svobodnyh_akb'].iloc[0]) + int(
+        df.loc[df['city_id'] == 12, 'svobodnyh_akb'].iloc[0])
+    df.loc[df['name'] == 'Total', 'svobodnyh_akb'] = int(df.loc[df['name'] == 'Total', 'svobodnyh_akb'].iloc[0]) - int(
+        df.loc[df['city_id'] == 12, 'svobodnyh_akb'].iloc[0])
+    df.loc[df['city_id'] == 12, 'svobodnyh_akb'] = int(df.loc[df['city_id'] == 12, 'svobodnyh_akb'].iloc[0]) + int(
+        df.loc[df['city_id'] == 12, 'v_ozhidanii_activacii'].iloc[0]) + int(df.loc[df['city_id'] == 12, 'remont'].iloc[0])
+    df.loc[df['city_id'] == 11, 'svobodnyh_akb'] = int(df.loc[df['city_id'] == 11, 'svobodnyh_akb'].iloc[0]) + int(
+        df.loc[df['city_id'] == 11, 'v_ozhidanii_activacii'].iloc[0]) + int(df.loc[df['city_id'] == 11, 'remont'].iloc[0])
     df.loc[df['city_id'] == 11, 'itogo_sim'] = df[['uteryany', 'v_ozhidanii_activacii',
                                                    'slugebnyi_transport', 'remont', 'vyveden_iz_ekspluatacii',
                                                    'mr_user',
