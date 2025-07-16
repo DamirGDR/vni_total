@@ -969,21 +969,7 @@ def main():
     df_t_city.to_sql("t_city", engine_postgresql, if_exists="append", index=False)
     print('Table for graphs t_city!')
 
-    # Тест гугл
-    google_service_account_json = get_google_creds()
-    with open('google_json.json', 'w') as fp:
-        json.dump(json.loads(google_service_account_json, strict=False), fp)
-    generated_json_file = './google_json.json'
 
-    SERVICE_ACCOUNT_FILE = './google_json.json'
-    SPREADSHEET_ID = '1BMH_HSxmK33SZvv3cIAH_SIgvm2NncSTTKI1aa7CoG8'
-    RANGE_NAME = 'Плановое!A1:E13'
-    service_account_file = generated_json_file
-
-    sheets_service = get_sheets_service(SERVICE_ACCOUNT_FILE)
-
-    df = read_sheet_data_to_pandas(sheets_service, SPREADSHEET_ID, RANGE_NAME)
-    print(df)
 
     # АКБ - начало
     select_df1 = '''
