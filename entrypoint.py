@@ -1251,7 +1251,8 @@ def main():
     df['planovoye'] = df['planovoye'].astype(int)
     df.loc[df['name'] == 'Total', 'city_id'] = 0
     df.to_sql("akb", engine_postgresql, if_exists="append", index=False)
-
+	print('AKB OK!')
+	
     # АКБ - конец
 
 
