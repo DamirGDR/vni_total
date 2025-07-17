@@ -881,7 +881,7 @@ def main():
     	FROM
     	    t_bike
     	WHERE t_bike.error_status = 4 AND t_bike.bike_type = 2 
-        -- AND t_bike.model LIKE '%freego%'
+        AND t_bike.model LIKE '%freego%'
     	GROUP BY
     		t_bike.city_id, t_bike.error_status
     ),
@@ -893,7 +893,7 @@ def main():
     	FROM
     	    t_bike
     	WHERE t_bike.error_status = 8 AND t_bike.bike_type = 2 
-        -- AND t_bike.model LIKE '%freego%'
+        AND t_bike.model LIKE '%freego%'
     	GROUP BY
     		t_bike.city_id, t_bike.error_status
     ),
@@ -905,7 +905,7 @@ def main():
     	FROM
     	    t_bike
     	WHERE t_bike.error_status = 5 AND t_bike.bike_type = 2 
-        -- AND t_bike.model LIKE '%freego%'
+        AND t_bike.model LIKE '%freego%'
     	GROUP BY
     		t_bike.city_id, t_bike.error_status
     ),
@@ -917,7 +917,7 @@ def main():
     	FROM
     	    t_bike
     	WHERE t_bike.error_status = 3 AND t_bike.bike_type = 2 
-        -- AND t_bike.model LIKE '%freego%'
+        AND t_bike.model LIKE '%freego%'
     	GROUP BY
     		t_bike.city_id, t_bike.error_status
     ),
@@ -929,7 +929,7 @@ def main():
     	FROM
     	    t_bike
     	WHERE t_bike.error_status = 2 AND t_bike.bike_type = 2 
-        -- AND t_bike.model LIKE '%freego%'
+        AND t_bike.model LIKE '%freego%'
     	GROUP BY
     		t_bike.city_id, t_bike.error_status
     ),
@@ -943,7 +943,7 @@ def main():
     	    TIMESTAMPDIFF(SECOND, FROM_UNIXTIME(t_bike.heart_time), NOW()) < 900
     	    AND t_bike.error_status IN (0, 7)
     	    AND t_bike.bike_type = 2
-    	    -- AND t_bike.model LIKE '%freego%'
+    	    AND t_bike.model LIKE '%freego%'
     	GROUP BY
     	    t_bike.city_id
     	ORDER BY
@@ -959,7 +959,7 @@ def main():
     	    TIMESTAMPDIFF(SECOND, FROM_UNIXTIME(t_bike.heart_time), NOW()) > 900
     	    AND t_bike.error_status IN (0, 7)
     	    AND t_bike.bike_type = 2
-    	    -- AND t_bike.model LIKE '%freego%'
+    	    AND t_bike.model LIKE '%freego%'
     	GROUP BY
     	    t_bike.city_id
     	ORDER BY
@@ -974,7 +974,7 @@ def main():
     	    t_bike
     	WHERE t_bike.error_status = 1 
         AND t_bike.bike_type = 2 
-        -- AND t_bike.model LIKE '%freego%'
+        AND t_bike.model LIKE '%freego%'
     	GROUP BY
     		t_bike.city_id, t_bike.error_status
     )
@@ -1014,6 +1014,7 @@ def main():
     WHERE t_bike.error_status = 3 
         AND (t_bike.bike_type = 2 OR t_bike.bike_type = 3)
         AND t_bike.city_id = 11
+	AND t_bike.model LIKE '%freego%'
     GROUP BY
     	t_bike.error_status
     '''
