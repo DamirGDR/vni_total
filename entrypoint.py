@@ -1111,7 +1111,7 @@ def main():
     df['skolko_nugno_akb'] = df['planovoye'] * df['akb_na_park_percent']
     df['skolko_dovesti_sim'] = df['planovoye'] - df['fact_park']
     df['skolko_dovesti_akb'] = df['skolko_nugno_akb'] - df['svobodnyh_akb']
-    df['timestamp'] = pd.Timestamp.now()
+    df['timestamp'] = pd.Timestamp.now() + pd.Timedelta(hours=3)
 
     df_temp = df.copy()
     df_temp['planovoye'] = df_temp['planovoye'].astype(int)
@@ -1180,7 +1180,7 @@ def main():
 
     df_cities = df.loc[df['city_id'].isin([13, 15, 18, 16, 17, 19, 20, 21, 22, 25])]
     total_row_work = {
-        'timestamp': [pd.Timestamp.now()],
+        'timestamp': [pd.Timestamp.now() + pd.Timedelta(hours=3)],
         'city_id': [100],
         'name': ['Total_cities'],
         'uteryany': [df_cities['uteryany'].sum()],
@@ -1209,7 +1209,7 @@ def main():
     df_sklady = df.loc[df['city_id'].isin([11, 12])]
 
     total_row_sklady = {
-        'timestamp': [pd.Timestamp.now()],
+        'timestamp': [pd.Timestamp.now() + pd.Timedelta(hours=3)],
         'city_id': [1000],
         'name': ['Total_stocks'],
         'uteryany': [df_sklady['uteryany'].sum()],
@@ -1234,7 +1234,7 @@ def main():
     }
 
     df = pd.concat([df, pd.DataFrame.from_dict(total_row_sklady)])
-    df['timestamp'] = pd.Timestamp.now()
+    df['timestamp'] = pd.Timestamp.now() + pd.Timedelta(hours=3)
 
     df.to_sql("akb_cities_and_stocks", engine_postgresql, if_exists="append", index=False)
     print('akb_cities_and_stocks UPDATED!')
