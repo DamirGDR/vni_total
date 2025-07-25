@@ -1298,18 +1298,18 @@ def main():
 
     # АКБ с красными столбцами Конец
 
-    # Выгрузка t_bike_history Начало
-    select_df_t_bike = '''
-        SELECT
-            NOW() AS timestamp,
-            t_bike.*
-        FROM t_bike
-    '''
-    df_t_bike = pd.read_sql(select_df_t_bike, engine_mysql)
-    df_t_bike.to_sql("t_bike_history", engine_postgresql, if_exists="append", index=False)
-    print('t_bike_history UPDATED!')
+    # # Выгрузка t_bike_history Начало
+    # select_df_t_bike = '''
+    #     SELECT
+    #         NOW() AS timestamp,
+    #         t_bike.*
+    #     FROM t_bike
+    # '''
+    # df_t_bike = pd.read_sql(select_df_t_bike, engine_mysql)
+    # df_t_bike.to_sql("t_bike_history", engine_postgresql, if_exists="append", index=False)
+    # print('t_bike_history UPDATED!')
 
-    # Выгрузка t_bike_history Начало
+    # # Выгрузка t_bike_history Конец
 
 
     # Выгрузка по городам для графиков
