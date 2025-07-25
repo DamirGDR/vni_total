@@ -1026,8 +1026,8 @@ def main():
     	COALESCE(kvt.kvt,0) AS kvt,
     	COALESCE(mr_admin.mr_admin,0) AS mr_admin,
     	COALESCE(mr_admin.mr_admin,0) + COALESCE(kvt.kvt,0) + COALESCE(kvt_offline.kvt_offline,0) AS fact_park,
-    	COALESCE(uteryany.uteryany,0) + COALESCE(v_ozhidanii_activacii.v_ozhidanii_activacii,0) + COALESCE(slugebnyi_transport.slugebnyi_transport,0) + COALESCE(remont.remont,0) + COALESCE(vyveden_iz_ekspluatacii.vyveden_iz_ekspluatacii,0) + COALESCE(mr_user.mr_user,0) + COALESCE(kvt.kvt,0) + COALESCE(mr_admin.mr_admin,0) + COALESCE(kvt_offline.kvt_offline,0) AS itogo_sim_for_stocks,
-    	COALESCE(v_ozhidanii_activacii.v_ozhidanii_activacii,0) + COALESCE(slugebnyi_transport.slugebnyi_transport,0) + COALESCE(remont.remont,0) + COALESCE(vyveden_iz_ekspluatacii.vyveden_iz_ekspluatacii,0) + COALESCE(mr_user.mr_user,0) + COALESCE(kvt.kvt,0) + COALESCE(mr_admin.mr_admin,0) + COALESCE(kvt_offline.kvt_offline,0) AS itogo_sim_for_city,
+    	COALESCE(v_ozhidanii_activacii.v_ozhidanii_activacii,0) + COALESCE(slugebnyi_transport.slugebnyi_transport,0) + COALESCE(remont.remont,0) + COALESCE(vyveden_iz_ekspluatacii.vyveden_iz_ekspluatacii,0) + COALESCE(mr_user.mr_user,0) + COALESCE(kvt.kvt,0) + COALESCE(mr_admin.mr_admin,0) + COALESCE(kvt_offline.kvt_offline,0) AS itogo_sim_for_stocks,
+    	COALESCE(uteryany.uteryany,0) + COALESCE(v_ozhidanii_activacii.v_ozhidanii_activacii,0) + COALESCE(slugebnyi_transport.slugebnyi_transport,0) + COALESCE(remont.remont,0) + COALESCE(vyveden_iz_ekspluatacii.vyveden_iz_ekspluatacii,0) + COALESCE(mr_user.mr_user,0) + COALESCE(kvt.kvt,0) + COALESCE(mr_admin.mr_admin,0) + COALESCE(kvt_offline.kvt_offline,0) AS itogo_sim_for_city,
     	COALESCE(kvt_offline.kvt_offline,0) AS kvt_offline
     FROM t_city_sklady
     LEFT JOIN uteryany ON t_city_sklady.id = uteryany.city_id AND t_city_sklady.model = uteryany.model
