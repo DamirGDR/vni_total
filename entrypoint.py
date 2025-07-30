@@ -1158,7 +1158,7 @@ def main():
     df = df.merge(df_spisannye[['name', 'spisannye']], how='left', on='name')
     df.fillna(0, inplace=True)
 
-    df['itogo_sim_for_stocks'] = df['uteryany'] + df['v_ozhidanii_activacii'] + df['slugebnyi_transport'] + df[
+    df['itogo_sim_for_stocks'] = df['spisannye'] + df['v_ozhidanii_activacii'] + df['slugebnyi_transport'] + df[
         'remont'] + df['vyveden_iz_ekspluatacii'] + df['mr_user'] + df['kvt'] + df['mr_admin'] + df['kvt_offline']
     df['itogo_sim_for_city'] = df['v_ozhidanii_activacii'] + df['slugebnyi_transport'] + df['remont'] + df[
         'vyveden_iz_ekspluatacii'] + df['mr_user'] + df['kvt'] + df['mr_admin'] + df['kvt_offline']
