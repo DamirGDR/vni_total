@@ -1134,8 +1134,7 @@ def main():
                     t_bike.user_group_id,
                     COUNT(t_bike.id) AS spisannye
                 FROM t_bike
-                WHERE t_bike.model = '' 
-                AND t_bike.user_group_id IS NOT NULL
+                WHERE t_bike.user_group_id IS NOT NULL
                 GROUP BY t_bike.city_id, t_bike.model, t_bike.user_group_id
                 ) AS spisannye) AS spisannye
         GROUP BY spisannye.name
@@ -1148,8 +1147,7 @@ def main():
                 t_bike.model AS name,
                 COUNT(t_bike.id) AS spisannye
             FROM t_bike
-            WHERE t_bike.model = '' 
-                AND t_bike.user_group_id IS NOT NULL 
+            WHERE t_bike.user_group_id IS NOT NULL 
                 GROUP BY t_bike.model) AS total
     '''
 
