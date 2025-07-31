@@ -1158,7 +1158,7 @@ def main():
 
     df['itogo_sim_for_stocks'] = df['spisannye'] + df['v_ozhidanii_activacii'] + df['slugebnyi_transport'] + df[
         'remont'] + df['vyveden_iz_ekspluatacii'] + df['mr_user'] + df['kvt'] + df['mr_admin'] + df['kvt_offline']
-    df['itogo_sim_for_city'] = df['v_ozhidanii_activacii'] + df['slugebnyi_transport'] + df['remont'] + df[
+    df['itogo_sim_for_city'] = df['uteryany'] + df['v_ozhidanii_activacii'] + df['slugebnyi_transport'] + df['remont'] + df[
         'vyveden_iz_ekspluatacii'] + df['mr_user'] + df['kvt'] + df['mr_admin'] + df['kvt_offline']
     df = df.iloc[:, [25, 0, 1, 2, 3, 4, 5, 6, 7, 8, 13, 9, 10, 26, 18, 21, 22, 17, 23, 24, 12, 11]]
 
