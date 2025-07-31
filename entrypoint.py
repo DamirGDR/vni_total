@@ -1324,9 +1324,9 @@ def main():
                 WHERE ranked."rank" = 1 
                 ORDER BY ranked.day_ DESC
                         ) AS res 
-                    WHERE res.day_ = DATE(NOW())
+                   -- WHERE res.day_ = DATE(NOW())
                     ) AS raw
-        -- WHERE raw.city_id = 1000
+        WHERE raw.day_ = DATE(NOW())
         ORDER BY raw."timestamp" DESC
     '''
     df_akb_cities_and_stocks_result = pd.read_sql(select_akb_cities_and_stocks_result, engine_postgresql)
