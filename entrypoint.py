@@ -1094,7 +1094,7 @@ def main():
     service_account_file = generated_json_file
     sheets_service = get_sheets_service(SERVICE_ACCOUNT_FILE)
     df3 = read_sheet_data_to_pandas(sheets_service, SPREADSHEET_ID, RANGE_NAME)
-	df3 = df3.replace('', '0')
+	# df3 = df3.replace('', '0')
     df3['city_id'] = df3['city_id'].astype(int)
     df3['planovoye'] = df3['planovoye'].astype(int)
     df3['Batteries V4.6'] = df3['Batteries V4.6'].astype(int)
