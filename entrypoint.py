@@ -1235,9 +1235,9 @@ def main():
     df['timestamp'] = pd.Timestamp.now() + pd.Timedelta(hours=3)
     # Волос свободные АКБ
     df.loc[(df['name'] == 'Volos') & (df['city_id'] == 17), 'svobodnyh_akb'] = int(
-        df.loc[(df['name'] == 'Volos') & (df['city_id'] == 17), 'svobodnyh_akb']) + int(
-        df.loc[df['name'] == 'Малый склад_v3pro', 'svobodnyh_akb']) + int(
-        df.loc[df['name'] == 'Малый склад_v.4.6', 'svobodnyh_akb'])
+        df.loc[(df['name'] == 'Volos') & (df['city_id'] == 17), 'svobodnyh_akb'].loc[0]) + int(
+        df.loc[df['name'] == 'Малый склад_v3pro', 'svobodnyh_akb'].loc[0]) + int(
+        df.loc[df['name'] == 'Малый склад_v.4.6', 'svobodnyh_akb'].loc[0])
 
     df.to_sql("akb_cities_and_stocks", engine_postgresql, if_exists="append", index=False)
     print('akb_cities_and_stocks UPDATED!')
