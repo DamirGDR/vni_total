@@ -2000,24 +2000,24 @@ def main():
                     WHEN ds."nomer_decada" IN (1,2) THEN 
                         CASE 
                             WHEN CURRENT_DATE - ds."decade" > 10 THEN ds."Actual duration (hours)" * 60
-                            ELSE ds."Actual duration (hours)" * 60 / (CURRENT_DATE - ds."decade") * 10
+                            ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."decade", 1) * 10
                         END
                     WHEN ds."nomer_decada" IN (3) THEN
                         CASE 
                             WHEN EXTRACT(MONTH FROM ds."decade") IN (1,3,5,7,8,10,12) THEN 
                                 CASE
                                     WHEN CURRENT_DATE - ds."decade" > 11 THEN ds."Actual duration (hours)" * 60
-                                    ELSE ds."Actual duration (hours)" * 60 / (CURRENT_DATE - ds."decade") * ds."kol_vo_dney_3_decada"
+                                    ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."decade", 1) * ds."kol_vo_dney_3_decada"
                                 END
                             WHEN EXTRACT(MONTH FROM ds."decade") IN (4,6,9,11) THEN 
                                 CASE 
                                     WHEN CURRENT_DATE - ds."decade" > 10 THEN ds."Actual duration (hours)" * 60
-                                    ELSE ds."Actual duration (hours)" * 60 / (CURRENT_DATE - ds."decade") * ds."kol_vo_dney_3_decada"
+                                    ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."decade", 1) * ds."kol_vo_dney_3_decada"
                                 END
                             WHEN EXTRACT(MONTH FROM ds."decade") IN (2) THEN 
                                 CASE 
                                     WHEN CURRENT_DATE - ds."decade" > 8 THEN ds."Actual duration (hours)" * 60
-                                    ELSE ds."Actual duration (hours)" * 60 / (CURRENT_DATE - ds."decade") * ds."kol_vo_dney_3_decada"
+                                    ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."decade", 1) * ds."kol_vo_dney_3_decada"
                                 END
                         END
                 END AS "Prediction minutes"
