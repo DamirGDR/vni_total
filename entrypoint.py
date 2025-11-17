@@ -2861,7 +2861,7 @@ def main():
     '''
     df_t_daily_report = pd.read_sql(select_df_t_daily_report, engine_postgresql)
     df_t_daily_report.to_sql("t_daily_report", engine_postgresql, if_exists="append", index=False)
-    print('Got it: t_daily_report')
+    print('Got it!: t_daily_report')
     # Обновление t_daily_report в Postgresql. Конец
 
 
