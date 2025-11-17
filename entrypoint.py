@@ -2834,7 +2834,7 @@ def main():
             GROUP BY tb.city_id
         )
         SELECT 
-            NOW() AS add_time ,
+            NOW() + INTERVAL '3 hours' AS add_time ,
             tc.id AS city_id,
             COALESCE(vni.kvt,0) AS kvt,
             COALESCE(vni.poezdok,0) AS poezdok,
