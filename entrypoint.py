@@ -2850,7 +2850,10 @@ def main():
             COALESCE(scooters_7_17.scooters_charge_less_30_not_rent_at_17_00,0) AS scooters_charge_less_30_not_rent_at_17_00,
             COALESCE(scooters_without_rides_yesterday.scooters_without_rides_yesterday,0) AS scooters_without_rides_yesterday,
             COALESCE(scooters_without_rides_more_2_days.scooters_without_rides_more_2_days,0) AS scooters_without_rides_more_2_days,
-            COALESCE(svobodnyh_akb.svobodnyh_akb,0) AS svobodnyh_akb
+            COALESCE(svobodnyh_akb.svobodnyh_akb,0) AS svobodnyh_akb,
+			COALESCE(poezdki_promo.poezdki_promo,0) AS poezdki_promo,
+			COALESCE(uteryany.uteryany,0) AS uteryany,
+			COALESCE(scooters_without_rides_over_1_month.scooters_without_rides_over_1_month,0) AS scooters_without_rides_over_1_month
         FROM damir.t_city tc
         LEFT JOIN vni ON tc.id = vni.id
         LEFT JOIN avg_kvt_yesterday ON tc.id = avg_kvt_yesterday.id
@@ -2858,6 +2861,9 @@ def main():
         LEFT JOIN scooters_without_rides_yesterday ON tc.id = scooters_without_rides_yesterday.city_id
         LEFT JOIN scooters_without_rides_more_2_days ON tc.id = scooters_without_rides_more_2_days.city_id
         LEFT JOIN svobodnyh_akb ON tc.id = svobodnyh_akb.city_id
+		LEFT JOIN poezdki_promo ON tc.id = poezdki_promo.city_id
+		LEFT JOIN uteryany ON tc.id = uteryany.city_id
+		LEFT JOIN scooters_without_rides_over_1_month ON tc.id = scooters_without_rides_over_1_month.city_id
     '''
     df_t_daily_report = pd.read_sql(select_df_t_daily_report, engine_postgresql)
     df_t_daily_report.to_sql("t_daily_report", engine_postgresql, if_exists="append", index=False)
