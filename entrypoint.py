@@ -2853,7 +2853,8 @@ def main():
             COALESCE(svobodnyh_akb.svobodnyh_akb,0) AS svobodnyh_akb,
 			COALESCE(poezdki_promo.poezdki_promo,0) AS poezdki_promo,
 			COALESCE(uteryany.uteryany,0) AS uteryany,
-			COALESCE(scooters_without_rides_over_1_month.scooters_without_rides_over_1_month,0) AS scooters_without_rides_over_1_month
+			COALESCE(scooters_without_rides_over_1_month.scooters_without_rides_over_1_month,0) AS scooters_without_rides_over_1_month,
+			COALESCE(tkp.kvt_plan,0) AS kvt_plan
         FROM damir.t_city tc
         LEFT JOIN vni ON tc.id = vni.id
         LEFT JOIN avg_kvt_yesterday ON tc.id = avg_kvt_yesterday.id
@@ -2864,6 +2865,7 @@ def main():
 		LEFT JOIN poezdki_promo ON tc.id = poezdki_promo.city_id
 		LEFT JOIN uteryany ON tc.id = uteryany.city_id
 		LEFT JOIN scooters_without_rides_over_1_month ON tc.id = scooters_without_rides_over_1_month.city_id
+		LEFT JOIN damir.t_kvt_plan tkp ON tc.id = tkp.city_id
     '''
     df_t_daily_report = pd.read_sql(select_df_t_daily_report, engine_postgresql)
     df_t_daily_report.to_sql("t_daily_report", engine_postgresql, if_exists="append", index=False)
