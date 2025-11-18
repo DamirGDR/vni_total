@@ -2854,7 +2854,8 @@ def main():
 			COALESCE(poezdki_promo.poezdki_promo,0) AS poezdki_promo,
 			COALESCE(uteryany.uteryany,0) AS uteryany,
 			COALESCE(scooters_without_rides_over_1_month.scooters_without_rides_over_1_month,0) AS scooters_without_rides_over_1_month,
-			COALESCE(tkp.kvt_plan,0) AS kvt_plan
+			COALESCE(tkp.kvt_plan,0) AS kvt_plan,
+			COALESCE(vni.obcshee_vrmeya_min,0) AS obcshee_vrmeya_min
         FROM damir.t_city tc
         LEFT JOIN vni ON tc.id = vni.id
         LEFT JOIN avg_kvt_yesterday ON tc.id = avg_kvt_yesterday.id
