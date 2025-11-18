@@ -2032,7 +2032,7 @@ def main():
                     ds."Nickname",
                     SUM(ds."Actual duration (hours)") * 60 AS "Actual minutes",
                     SUM(ds."Actual duration (hours)") AS "Actual duration (hours)",
-                    ROUND(SUM(ds."Minutes") / NULLIF(SUM(ds."Actual duration (hours)"), 0),2) / 60 AS "min_eff"
+                    ROUND((SUM(ds."Minutes") / NULLIF(SUM(ds."Actual duration (hours)"), 0))::numeric / 60, 2) AS "min_eff"
                 FROM 
                     (
                     SELECT
@@ -2120,7 +2120,7 @@ def main():
                         ds."Nickname",
                         SUM(ds."Actual duration (hours)") * 60 AS "Actual minutes",
                         SUM(ds."Actual duration (hours)") AS "Actual duration (hours)",
-                        ROUND(SUM(ds."Minutes") / NULLIF(SUM(ds."Actual duration (hours)"), 0),2) / 60 AS "min_eff"
+                        ROUND((SUM(ds."Minutes") / NULLIF(SUM(ds."Actual duration (hours)"), 0) / 60)::numeric, 2) AS "min_eff"
                     FROM 
                         (SELECT
                             date_trunc('month', ds."Date") :: date AS "month",
