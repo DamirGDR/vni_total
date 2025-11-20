@@ -2779,7 +2779,7 @@ def main():
             WHERE tb.id NOT IN (SELECT 
                                     tbu.bid 
                                 FROM damir.t_bike_use tbu 
-                                WHERE tbu.ride_status!=5 AND (to_timestamp(tbu."date")::date BETWEEN '2025-05-01'::date AND current_date - INTERVAL '2 days')
+                                WHERE tbu.ride_status!=5 AND (to_timestamp(tbu."date")::date BETWEEN current_date - INTERVAL '2 days' AND current_date)
                                 )
             GROUP BY tb.city_id
         ),
