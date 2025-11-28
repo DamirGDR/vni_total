@@ -3612,7 +3612,8 @@ def main():
         SELECT 
             tb.city_id ,
             COUNT(tb.id) FILTER (WHERE tb.error_status = 6) AS uteryany,
-            COUNT(tb.id) FILTER (WHERE tb.error_status = 1) AS mr_admin
+            COUNT(tb.id) FILTER (WHERE tb.error_status = 1) AS mr_admin,
+			COUNT(tb.id) FILTER (WHERE (tb.error_status IN (0, 7) AND tb.power > 30 AND EXTRACT(EPOCH FROM (NOW() - TO_TIMESTAMP(tb.g_time))) < 900)) AS for_rent_power_more_30
         FROM damir.t_bike tb 
         GROUP BY tb.city_id
     ),
@@ -3650,7 +3651,8 @@ def main():
         COALESCE(svobodnyh_akb.mr_admin,0) AS mr_admin,
         COALESCE(scooters_without_rides_over_1_month.scooters_without_rides_over_1_month,0) AS scooters_without_rides_over_1_month,
         COALESCE(tkp.kvt_plan,0) AS kvt_plan,
-        COALESCE(vni.obcshee_vrmeya_min,0) AS obcshee_vrmeya_min
+        COALESCE(vni.obcshee_vrmeya_min,0) AS obcshee_vrmeya_min,
+		COALESCE(uteryany.for_rent_power_more_30,0) AS for_rent_power_more_30
     FROM damir.t_city tc
     LEFT JOIN vni ON tc.id = vni.id
     LEFT JOIN avg_kvt_yesterday ON tc.id = avg_kvt_yesterday.city_id
