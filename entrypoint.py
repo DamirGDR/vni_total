@@ -3696,7 +3696,8 @@ def main():
             tdr.kvt_plan ,
             tdr.obcshee_vrmeya_min ,
             tdr.mr_admin ,
-            tdr.fact_park
+            tdr.fact_park ,
+			tdr.for_rent_power_more_30
         FROM 
             (
             SELECT
