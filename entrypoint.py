@@ -2835,7 +2835,7 @@ def main():
                 ) AS temp_tab 
             GROUP BY temp_tab."City"
             ) AS target_tab
-        LEFT JOIN 
+        FULL JOIN 
             (
                 SELECT 
                     temp_tab."City" ,
@@ -2859,7 +2859,7 @@ def main():
                         ) AS temp_tab
                 GROUP BY temp_tab."City"
             ) AS planned_tab ON target_tab."City" = planned_tab."City" 
-        LEFT JOIN 
+        FULL JOIN 
             (
                 SELECT 
                     temp_tab."City" ,
