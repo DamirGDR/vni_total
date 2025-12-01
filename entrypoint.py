@@ -2806,7 +2806,8 @@ def main():
             ORDER BY tb_all."number" ASC
         )
         SELECT
-            target_tab."City" ,
+            --target_tab."City" ,
+			COALESCE(target_tab."City" , planned_tab."City" , completed_tab."City") AS "City" ,
             COALESCE(target_tab."target", 0) AS target,
             COALESCE(planned_tab.planned, 0) AS planned,
             COALESCE(completed_tab.completed, 0) AS completed ,
