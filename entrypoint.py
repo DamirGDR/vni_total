@@ -2642,17 +2642,17 @@ def main():
                         WHEN EXTRACT(MONTH FROM ds."month") IN (1,3,5,7,8,10,12) THEN 
                             CASE
                                 WHEN CURRENT_DATE - ds."month" > 31 THEN ds."Actual duration (hours)" * 60
-                                ELSE ds."Actual duration (hours)" * 60 / (CURRENT_DATE - ds."month") * ds."kol_vo_dney_month"
+                                ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."month", 1) * ds."kol_vo_dney_month"
                             END
                         WHEN EXTRACT(MONTH FROM ds."month") IN (4,6,9,11) THEN 
                             CASE 
                                 WHEN CURRENT_DATE - ds."month" > 30 THEN ds."Actual duration (hours)" * 60
-                                ELSE ds."Actual duration (hours)" * 60 / (CURRENT_DATE - ds."month") * ds."kol_vo_dney_month"
+                                ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."month", 1) * ds."kol_vo_dney_month"
                             END
                         WHEN EXTRACT(MONTH FROM ds."month") IN (2) THEN 
                             CASE 
                                 WHEN CURRENT_DATE - ds."month" > 28 THEN ds."Actual duration (hours)" * 60
-                                ELSE ds."Actual duration (hours)" * 60 / (CURRENT_DATE - ds."month") * ds."kol_vo_dney_month"
+                                ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."month", 1) * ds."kol_vo_dney_month"
                             END
                     END AS "Prediction minutes"
                 FROM 
