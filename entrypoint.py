@@ -3979,8 +3979,8 @@ def main():
             transaction.commit()
             print(f"Таблица t_parking_revenue_stats успешно очищена!")
 
-    df_t_parking_revenue_stats.to_sql("t_parking_revenue_stats", engine_postgresql, if_exists="append", index=False)
-    print('Таблица t_parking_revenue_stats успешно обновлена!')
+    # df_t_parking_revenue_stats.to_sql("t_parking_revenue_stats", engine_postgresql, if_exists="append", index=False)
+    # print('Таблица t_parking_revenue_stats успешно обновлена!')
 
     # Выгрузка t_parking_kvt
     select_t_parking_kvt = '''
@@ -4051,8 +4051,8 @@ def main():
             transaction.commit()
             print(f"Таблица t_parking_kvt успешно очищена!")
 
-    df_t_parking_kvt.to_sql("t_parking_kvt", engine_postgresql, if_exists="append", index=False)
-    print('Таблица df_t_parking_kvt успешно обновлена!')
+    # df_t_parking_kvt.to_sql("t_parking_kvt", engine_postgresql, if_exists="append", index=False)
+    # print('Таблица df_t_parking_kvt успешно обновлена!')
     #   Выгрузка t_parking_revenue_stats. Конец
 
 
