@@ -3970,7 +3970,7 @@ def main():
     # Очистка старых данных в t_parking_revenue_stats
     truncate_t_parking_revenue_stats = '''DELETE FROM damir.t_parking_revenue_stats 
        WHERE damir.t_parking_revenue_stats."timestamp" >= CURRENT_DATE - INTERVAL '1 hour'
-       AND damir.t_parking_revenue_stats."timestamp" <= NOW() - INTERVAL '2 hour';
+       AND damir.t_parking_revenue_stats."timestamp" <= NOW();
        '''
 
     with engine_postgresql.connect() as connection:
