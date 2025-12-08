@@ -6,6 +6,7 @@ import sqlalchemy as sa
 import json
 import google.oauth2.service_account
 import googleapiclient.discovery
+import datetime
 
 # Секреты MySQL
 
@@ -110,6 +111,7 @@ def get_sheets_service(service_account_file: str):
 
 
 def main():
+	print('Время aws: {}'.format(datetime.datetime.now()))
     # Выгрузка за сегодня из MySQL
     select_vni_total = """
     -- Из Datalens
