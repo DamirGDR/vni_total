@@ -3970,7 +3970,7 @@ def main():
     # Очистка старых данных в t_parking_revenue_stats
     truncate_t_parking_revenue_stats = '''DELETE FROM damir.t_parking_revenue_stats 
        WHERE damir.t_parking_revenue_stats."timestamp" >= CURRENT_DATE - INTERVAL '1 hour'
-       AND damir.t_parking_revenue_stats."timestamp" <= NOW() + INTERVAL '3 hour';
+       AND damir.t_parking_revenue_stats."timestamp" <= NOW() - INTERVAL '2 hour';
        '''
 
     with engine_postgresql.connect() as connection:
@@ -4041,8 +4041,8 @@ def main():
 
     # Очистка старых данных в t_parking_kvt
     truncate_t_parking_kvt = '''DELETE FROM damir.t_parking_kvt 
-       WHERE damir.t_parking_kvt."timestamp" >= CURRENT_DATE - INTERVAL '1 hour'
-       AND damir.t_parking_kvt."timestamp" <= NOW() + INTERVAL '5 hour';
+       WHERE damir.t_parking_kvt."timestamp" >= CURRENT_DATE - INTERVAL '2 hour'
+       AND damir.t_parking_kvt."timestamp" <= NOW();
        '''
 
     with engine_postgresql.connect() as connection:
