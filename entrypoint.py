@@ -3958,7 +3958,7 @@ def main():
                 AND 
                 (tbu.`date` > UNIX_TIMESTAMP(DATE(NOW()) - INTERVAL 1 HOUR)
                 AND
-                tbu.`date` <= UNIX_TIMESTAMP(NOW() - INTERVAL 2 HOUR))
+                tbu.`date` <= UNIX_TIMESTAMP(NOW() - INTERVAL 1 HOUR))
                 ) AS res_tab
         WHERE res_tab.rn = 1
         GROUP BY STR_TO_DATE(DATE_FORMAT(res_tab.timestamp, '%Y-%m-%d %H:00:00'), "%Y-%m-%d %H:%i:%s"), res_tab.city_id , res_tab.parking_id
