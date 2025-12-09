@@ -4005,7 +4005,7 @@ def main():
     # Выгрузка t_parking_kvt
     select_t_parking_kvt = '''
            SELECT
-                NOW() + INTERVAL '3 hour' AS add_time ,
+                NOW() + INTERVAL '2 hour' AS add_time ,
                 res.timestamp AS timestamp ,
                 res.city_id ,
                 res.parking_id ,
