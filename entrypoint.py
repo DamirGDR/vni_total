@@ -4114,7 +4114,7 @@ def main():
                 FROM damir.t_parking_kvt 
             '''
     df_parking_count111 = pd.read_sql(select_df_parking_count111, engine_postgresql)
-    print('Количество записей к удалению в parking_count_kvt: {}, {}, {}'.format(df_parking_count111.iloc[0].iloc[2],
+    print('Всего записей в parking_count_kvt: {}, {}, {}'.format(df_parking_count111.iloc[0].iloc[2],
                                                                                  df_parking_count111.iloc[0].iloc[0],
                                                                                  df_parking_count111.iloc[0].iloc[1]))
     # Проверка количества строк. Конец
