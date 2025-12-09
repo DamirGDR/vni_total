@@ -4048,7 +4048,7 @@ def main():
                     FROM damir.t_bike_history tbh
                     WHERE tbh.error_status IN (0,7)
                         AND tbh."timestamp" >= CURRENT_DATE - INTERVAL '2 hour'
-                        AND tbh."timestamp" <= NOW() + INTERVAL '1 hour'
+                        AND tbh."timestamp" <= NOW() + INTERVAL '2 hour'
                         ) AS res_tab
                 CROSS JOIN damir.t_area ta 
                 WHERE res_tab.rn = 1
