@@ -3915,103 +3915,103 @@ def main():
     print('Таблица t_daily_report_result успешно обновлена!')
     # Выгрузка t_daily_report_result. Конец
 
-    #   Выгрузка t_parking_revenue_stats. Начало
-    # Выгрузка t_parking_revenue_stats
-    select_t_parking_revenue_stats = '''
-            SELECT 
-            NOW() AS add_time ,
-            STR_TO_DATE(DATE_FORMAT(res_tab.timestamp, '%Y-%m-%d %H:00:00'), "%Y-%m-%d %H:%i:%s") AS timestamp,
-            res_tab.city_id ,
-            res_tab.parking_id ,
-            COUNT(res_tab.ride_amount) AS poezdok,
-            SUM(res_tab.ride_amount) AS obzchaya_stoimost,
-            SUM(res_tab.discount) AS oplacheno_bonusami,
-            SUM(res_tab.bike_discount_amount) AS skidka ,
-            SUM(res_tab.subscription_price) AS abon
-        FROM 
-            (
-            SELECT
-                from_unixtime(tbu.`date`) AS "timestamp" ,
-                ta.city_id ,
-                ta.id  AS parking_id ,
-                6371000 * acos(
-                            cos(radians(tbu.start_lat)) * 
-                            cos(radians(ta.lat)) * 
-                            cos(radians(ta.lng) - radians(tbu.start_lng)) + 
-                            sin(radians(tbu.start_lat)) * 
-                            sin(radians(ta.lat))) AS distance ,
-                IFNULL(tbu.ride_amount,0) AS ride_amount,
-                IFNULL(tbu.discount,0) AS discount,
-                IFNULL(tpd.bike_discount_amount,0) AS bike_discount_amount,
-                IFNULL(ts.price , 0) AS subscription_price ,
-                RANK() OVER (PARTITION BY tbu.id ORDER BY 6371000 * acos(
-                                                                        cos(radians(tbu.start_lat)) * 
-                                                                        cos(radians(ta.lat)) * 
-                                                                        cos(radians(ta.lng) - radians(tbu.start_lng)) + 
-                                                                        sin(radians(tbu.start_lat)) * 
-                                                                        sin(radians(ta.lat)))) AS rn 
-            FROM shamri.t_bike_use tbu
-            LEFT JOIN shamri.t_payment_details tpd ON tbu.id = tpd.ride_id
-            LEFT JOIN shamri.t_subscription ts ON tbu.subscription_id = ts.id 
-            CROSS JOIN shamri.t_area ta 
-            WHERE tbu.ride_status != 5
-                AND 
-                (tbu.`date` > UNIX_TIMESTAMP(DATE(NOW()) - INTERVAL 1 HOUR)
-                AND
-                tbu.`date` <= UNIX_TIMESTAMP(NOW()))
-                ) AS res_tab
-        WHERE res_tab.rn = 1
-        GROUP BY STR_TO_DATE(DATE_FORMAT(res_tab.timestamp, '%Y-%m-%d %H:00:00'), "%Y-%m-%d %H:%i:%s"), res_tab.city_id , res_tab.parking_id
-        ORDER BY STR_TO_DATE(DATE_FORMAT(res_tab.timestamp, '%Y-%m-%d %H:00:00'), "%Y-%m-%d %H:%i:%s") ASC
-    '''
+    # #   Выгрузка t_parking_revenue_stats. Начало
+    # # Выгрузка t_parking_revenue_stats
+    # select_t_parking_revenue_stats = '''
+    #         SELECT 
+    #         NOW() AS add_time ,
+    #         STR_TO_DATE(DATE_FORMAT(res_tab.timestamp, '%Y-%m-%d %H:00:00'), "%Y-%m-%d %H:%i:%s") AS timestamp,
+    #         res_tab.city_id ,
+    #         res_tab.parking_id ,
+    #         COUNT(res_tab.ride_amount) AS poezdok,
+    #         SUM(res_tab.ride_amount) AS obzchaya_stoimost,
+    #         SUM(res_tab.discount) AS oplacheno_bonusami,
+    #         SUM(res_tab.bike_discount_amount) AS skidka ,
+    #         SUM(res_tab.subscription_price) AS abon
+    #     FROM 
+    #         (
+    #         SELECT
+    #             from_unixtime(tbu.`date`) AS "timestamp" ,
+    #             ta.city_id ,
+    #             ta.id  AS parking_id ,
+    #             6371000 * acos(
+    #                         cos(radians(tbu.start_lat)) * 
+    #                         cos(radians(ta.lat)) * 
+    #                         cos(radians(ta.lng) - radians(tbu.start_lng)) + 
+    #                         sin(radians(tbu.start_lat)) * 
+    #                         sin(radians(ta.lat))) AS distance ,
+    #             IFNULL(tbu.ride_amount,0) AS ride_amount,
+    #             IFNULL(tbu.discount,0) AS discount,
+    #             IFNULL(tpd.bike_discount_amount,0) AS bike_discount_amount,
+    #             IFNULL(ts.price , 0) AS subscription_price ,
+    #             RANK() OVER (PARTITION BY tbu.id ORDER BY 6371000 * acos(
+    #                                                                     cos(radians(tbu.start_lat)) * 
+    #                                                                     cos(radians(ta.lat)) * 
+    #                                                                     cos(radians(ta.lng) - radians(tbu.start_lng)) + 
+    #                                                                     sin(radians(tbu.start_lat)) * 
+    #                                                                     sin(radians(ta.lat)))) AS rn 
+    #         FROM shamri.t_bike_use tbu
+    #         LEFT JOIN shamri.t_payment_details tpd ON tbu.id = tpd.ride_id
+    #         LEFT JOIN shamri.t_subscription ts ON tbu.subscription_id = ts.id 
+    #         CROSS JOIN shamri.t_area ta 
+    #         WHERE tbu.ride_status != 5
+    #             AND 
+    #             (tbu.`date` > UNIX_TIMESTAMP(DATE(NOW()) - INTERVAL 1 HOUR)
+    #             AND
+    #             tbu.`date` <= UNIX_TIMESTAMP(NOW()))
+    #             ) AS res_tab
+    #     WHERE res_tab.rn = 1
+    #     GROUP BY STR_TO_DATE(DATE_FORMAT(res_tab.timestamp, '%Y-%m-%d %H:00:00'), "%Y-%m-%d %H:%i:%s"), res_tab.city_id , res_tab.parking_id
+    #     ORDER BY STR_TO_DATE(DATE_FORMAT(res_tab.timestamp, '%Y-%m-%d %H:00:00'), "%Y-%m-%d %H:%i:%s") ASC
+    # '''
 
-    df_t_parking_revenue_stats = pd.read_sql(select_t_parking_revenue_stats, engine_mysql)
-
-    # Проверка количества строк. Начало
-    select_df_parking_count1 = '''
-           SELECT
-               min("timestamp") ,
-               max("timestamp") ,
-               count(*)
-           FROM damir.t_parking_revenue_stats 
-           WHERE damir.t_parking_revenue_stats."timestamp" >= DATE(NOW() + INTERVAL '2 hours') - INTERVAL '1 hours' 
-                  AND damir.t_parking_revenue_stats."timestamp" <= NOW() + INTERVAL '2 hour'
-       '''
-    df_parking_count1 = pd.read_sql(select_df_parking_count1, engine_postgresql)
-    print('Количество записей к удалению в parking_count_revenue: {}, {}, {}'.format(df_parking_count1.iloc[0].iloc[2],
-                                                                                     df_parking_count1.iloc[0].iloc[0],
-                                                                                     df_parking_count1.iloc[0].iloc[1]))
-    # Проверка количества строк. Конец
-
-
-    # Очистка старых данных в t_parking_revenue_stats
-    truncate_t_parking_revenue_stats = '''DELETE FROM damir.t_parking_revenue_stats 
-       WHERE damir.t_parking_revenue_stats."timestamp" >= DATE(NOW() + INTERVAL '2 hours') - INTERVAL '1 hours'
-       AND damir.t_parking_revenue_stats."timestamp" <= NOW() + INTERVAL '2 hour';
-       '''
-
-    with engine_postgresql.connect() as connection:
-        with connection.begin() as transaction:
-            connection.execute(sa.text(truncate_t_parking_revenue_stats))
-            transaction.commit()
-            print(f"Таблица t_parking_revenue_stats успешно очищена!")
-
-    df_t_parking_revenue_stats.to_sql("t_parking_revenue_stats", engine_postgresql, if_exists="append", index=False)
-    print('Таблица t_parking_revenue_stats успешно обновлена!')
+    # df_t_parking_revenue_stats = pd.read_sql(select_t_parking_revenue_stats, engine_mysql)
 
     # Проверка количества строк. Начало
-    select_df_parking_count11 = '''
-               SELECT
-                   min("timestamp") ,
-                   max("timestamp") ,
-                   count(*)
-               FROM damir.t_parking_revenue_stats 
-           '''
-    df_parking_count11 = pd.read_sql(select_df_parking_count11, engine_postgresql)
-    print('Всего записей в parking_count_revenue: {}, {}, {}'.format(df_parking_count11.iloc[0].iloc[2],
-                                                                                     df_parking_count11.iloc[0].iloc[0],
-                                                                                     df_parking_count11.iloc[0].iloc[1]))
-    # Проверка количества строк. Конец
+    # select_df_parking_count1 = '''
+    #        SELECT
+    #            min("timestamp") ,
+    #            max("timestamp") ,
+    #            count(*)
+    #        FROM damir.t_parking_revenue_stats 
+    #        WHERE damir.t_parking_revenue_stats."timestamp" >= DATE(NOW() + INTERVAL '2 hours') - INTERVAL '1 hours' 
+    #               AND damir.t_parking_revenue_stats."timestamp" <= NOW() + INTERVAL '2 hour'
+    #    '''
+    # df_parking_count1 = pd.read_sql(select_df_parking_count1, engine_postgresql)
+    # print('Количество записей к удалению в parking_count_revenue: {}, {}, {}'.format(df_parking_count1.iloc[0].iloc[2],
+    #                                                                                  df_parking_count1.iloc[0].iloc[0],
+    #                                                                                  df_parking_count1.iloc[0].iloc[1]))
+    # # Проверка количества строк. Конец
+
+
+    # # Очистка старых данных в t_parking_revenue_stats
+    # truncate_t_parking_revenue_stats = '''DELETE FROM damir.t_parking_revenue_stats 
+    #    WHERE damir.t_parking_revenue_stats."timestamp" >= DATE(NOW() + INTERVAL '2 hours') - INTERVAL '1 hours'
+    #    AND damir.t_parking_revenue_stats."timestamp" <= NOW() + INTERVAL '2 hour';
+    #    '''
+
+    # with engine_postgresql.connect() as connection:
+    #     with connection.begin() as transaction:
+    #         connection.execute(sa.text(truncate_t_parking_revenue_stats))
+    #         transaction.commit()
+    #         print(f"Таблица t_parking_revenue_stats успешно очищена!")
+
+    # df_t_parking_revenue_stats.to_sql("t_parking_revenue_stats", engine_postgresql, if_exists="append", index=False)
+    # print('Таблица t_parking_revenue_stats успешно обновлена!')
+
+    # Проверка количества строк. Начало
+    # select_df_parking_count11 = '''
+    #            SELECT
+    #                min("timestamp") ,
+    #                max("timestamp") ,
+    #                count(*)
+    #            FROM damir.t_parking_revenue_stats 
+    #        '''
+    # df_parking_count11 = pd.read_sql(select_df_parking_count11, engine_postgresql)
+    # print('Всего записей в parking_count_revenue: {}, {}, {}'.format(df_parking_count11.iloc[0].iloc[2],
+    #                                                                                  df_parking_count11.iloc[0].iloc[0],
+    #                                                                                  df_parking_count11.iloc[0].iloc[1]))
+    # # Проверка количества строк. Конец
 
 
 
