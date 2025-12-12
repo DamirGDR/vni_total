@@ -3829,7 +3829,7 @@ def main():
 
     df_new_parking_revenue_stats = pd.read_sql(select_new_parking_revenue_stats, engine_postgresql)
 
-    df_new_parking_revenue_stats.to_sql("damir.t_parking_revenue_stats", engine_postgresql, if_exists="append",
+    df_new_parking_revenue_stats.to_sql("t_parking_revenue_stats", engine_postgresql, if_exists="append",
                                         index=False)
 
 
