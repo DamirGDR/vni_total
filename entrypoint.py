@@ -3820,7 +3820,7 @@ def main():
                                                                         ) AS rn
             FROM damir.t_orders_revenue tor
             CROSS JOIN damir.t_area ta 
-            WHERE tor."timestamp" >= date_trunc('hour', NOW() - INTERVAL '2 hours') - INTERVAL '2 hours'
+            WHERE tor."timestamp" >= date_trunc('hour', NOW())
             ) AS res_tab
         WHERE res_tab.rn = 1
         GROUP BY date_trunc('hour', res_tab.timestamp), res_tab.city_id , res_tab.parking_id
