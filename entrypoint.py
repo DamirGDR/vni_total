@@ -3953,7 +3953,7 @@ def main():
             res."date" ,
             res.city_id ,
             res.area ,
-            SUM(res.kvt) AS kvt ,
+            SUM(res.kvt)/24 AS kvt ,
             SUM(res.poezdok) AS poezdok ,
             SUM(res.obzchaya_stoimost) AS obzchaya_stoimost,
             SUM(res.oplacheno_bonusami) AS oplacheno_bonusami,
@@ -3973,7 +3973,7 @@ def main():
                 COALESCE(dtprs.skidka, 0)::float AS skidka,
                 COALESCE(dtprs.abon, 0)::float AS abon  
             FROM damir.t_parking_kvt tpk 
-            RIGHT JOIN damir.t_parking_revenue_stats dtprs ON tpk."timestamp" = dtprs."timestamp" AND tpk.city_id = dtprs.city_id AND tpk.parking_id = dtprs.parking_id
+            FULL JOIN damir.t_parking_revenue_stats dtprs ON tpk."timestamp" = dtprs."timestamp" AND tpk.city_id = dtprs.city_id AND tpk.parking_id = dtprs.parking_id
             LEFT JOIN public.parking p ON COALESCE(tpk.parking_id , dtprs.parking_id ) = p.parking_id
             ) AS res
         GROUP BY res."date" , res.city_id , res.area
