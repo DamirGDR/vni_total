@@ -3166,7 +3166,7 @@ def main():
     df_new_checkups['add_time'] = df_new_checkups['add_time'].dt.tz_localize(None)
     df_new_checkups['current_date'] = pd.to_datetime(df_new_checkups['current_date'])
     df_new_checkups['release_time'] = pd.to_datetime(df_new_checkups['release_time'])
-    df_new_checkups['number_of_rides'] = df_new_checkups['number_of_rides'].astype(int)
+    df_new_checkups['number_of_rides'] = df_new_checkups['number_of_rides'].fillna(0).astype(int)
 
     # Соединение старых и новых чекапов
     df_temp = pd.concat([df_old_checkups, df_new_checkups])
