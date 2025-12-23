@@ -1054,8 +1054,8 @@ def main():
     '''
 
     df1_all = pd.read_sql(select_df1_all, engine_mysql)
-    df1_all = df1_all.loc[df1_all['city_id'].isin([13, 15, 18, 16, 17, 19, 20, 21, 22, 25, 12, 11, 28, 29])]
-    df1_rabota = df1_all.loc[df1_all['city_id'].isin([13, 15, 18, 16, 17, 19, 20, 21, 22, 25, 28, 29])]
+    df1_all = df1_all.loc[df1_all['city_id'].isin([13, 15, 18, 16, 17, 19, 20, 21, 22, 25, 12, 11, 28, 29, 14])]
+    df1_rabota = df1_all.loc[df1_all['city_id'].isin([13, 15, 18, 16, 17, 19, 20, 21, 22, 25, 28, 29, 14])]
     df1_rabota_itog = df1_rabota.groupby(['city_id', 'name'], as_index=False) \
         .agg({'uteryany': 'sum',
               'v_ozhidanii_activacii': 'sum',
