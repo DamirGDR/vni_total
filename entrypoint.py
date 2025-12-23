@@ -1101,7 +1101,7 @@ def main():
 
     SERVICE_ACCOUNT_FILE = './google_json.json'
     SPREADSHEET_ID = '1BMH_HSxmK33SZvv3cIAH_SIgvm2NncSTTKI1aa7CoG8'
-    RANGE_NAME = 'Плановое!A1:E13'
+    RANGE_NAME = 'Плановое!A1:E16'
     service_account_file = generated_json_file
     sheets_service = get_sheets_service(SERVICE_ACCOUNT_FILE)
     df3 = read_sheet_data_to_pandas(sheets_service, SPREADSHEET_ID, RANGE_NAME)
