@@ -15,5 +15,7 @@ dependencies = [
     "google-cloud-iam==2.15.2",
     "gspread==5.4.0",
     "packaging",
-    "datetime"
+    "datetime",
+    "polyline==2.0.2",
+    "shapely==2.0.6"
 ]
