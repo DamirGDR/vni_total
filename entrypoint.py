@@ -3522,7 +3522,8 @@ def main():
             IFNULL(tbu.ride_amount,0) AS ride_amount,
             IFNULL(tbu.discount,0) AS discount,
             IFNULL(tpd.bike_discount_amount,0) AS bike_discount_amount,
-            IFNULL(ts.price , 0) AS subscription_price 
+            IFNULL(ts.price , 0) AS subscription_price ,
+			tbu.bid
         FROM shamri.t_bike_use tbu
         LEFT JOIN shamri.t_payment_details tpd ON tbu.id = tpd.ride_id
         LEFT JOIN shamri.t_subscription ts ON tbu.subscription_id = ts.id 
