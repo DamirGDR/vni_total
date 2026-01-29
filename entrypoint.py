@@ -130,7 +130,7 @@ def poly_contains_point_kvt(df):
 
 def poly_contains_point_orders(df):
     start_point = Point(df['start_lat'], df['start_lng'])
-    area_poly = df['area_poly']
+    area_poly = Polygon(df['area_poly'])
     res = area_poly.contains(start_point)
     return res
 
