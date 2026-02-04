@@ -1211,7 +1211,7 @@ def main():
         .replace('Kastoria_freego v3pro', 'Главный склад_v3pro') \
         .replace('Kastoria_freego v.4.6.', 'Главный склад_v.4.6')
 
-    df_cities = df.loc[df['city_id'].isin([13, 15, 18, 16, 17, 19, 20, 21, 22, 25])]
+    df_cities = df.loc[df['city_id'].isin([13, 15, 18, 16, 17, 19, 20, 21, 22, 25, 28, 29, 14, 32, 31])]
     total_row_work = {
         'timestamp': [pd.Timestamp.now() + pd.Timedelta(hours=3)],
         'city_id': [100],
