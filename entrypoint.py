@@ -135,271 +135,317 @@ def poly_contains_point_orders(df):
     return res
 
 def main():
-    print('Время aws: {}'.format(datetime.datetime.now()))
-    # Выгрузка за сегодня из MySQL
-    select_vni_total = """
-    -- Из Datalens
-	-- ВНИ Общий
-    WITH three_left_cols AS (
-        SELECT 
-            -- t_bike_use.id ,
-            DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') AS  'start_time',
-            COUNT(t_bike_use.ride_amount) AS 'poezdok',
-            SUM(IFNULL(t_bike_use.ride_amount,0)) AS 'obzchaya_stoimost',
-            SUM(IFNULL(t_bike_use.discount,0)) AS 'oplacheno_bonusami',
-            SUM(IFNULL(t_bike_use.duration,0)) / 60 AS 'obschee_vremya_min',
-            SUM(IFNULL(tpd.bike_discount_amount,0)) AS skidka 
-            FROM shamri.t_bike_use
-        LEFT JOIN shamri.t_payment_details tpd ON t_bike_use.id = tpd.ride_id 
-        WHERE t_bike_use.ride_status!=5 AND DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') >= '2024-07-21'
-        GROUP BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')
-    ),
-    sum_uspeh_abon AS(
-        SELECT 
-            DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
-            sum(IFNULL(t_trade.amount,0)) AS vyruchka_s_abonementov
-        FROM t_trade
-        WHERE t_trade.`type` = 6 AND t_trade.status = 1
-        GROUP BY start_time
-        ),
-    sum_mnogor_abon AS (
-        SELECT 
-            DATE_FORMAT(t_subscription_mapping.start_time, '%Y-%m-%d') AS start_time,
-            sum(IFNULL(t_subscription.price,0)) AS sum_mnogor_abon
-        FROM t_subscription_mapping
-        LEFT JOIN t_subscription ON t_subscription_mapping.subscription_id = t_subscription.id
-        GROUP BY DATE_FORMAT(t_subscription_mapping.start_time, '%Y-%m-%d')
-    ),
-    kvt AS (
-        SELECT 
-            DATE_FORMAT(FROM_UNIXTIME(t_bike.heart_time), '%Y-%m-%d') AS start_time,
-            COUNT(t_bike.id) AS kvt
-        FROM t_bike
-        WHERE TIMESTAMPDIFF(SECOND, now(), DATE_FORMAT(FROM_UNIXTIME(t_bike.g_time), '%Y-%m-%d %H:%m:%s')) < 900 AND t_bike.error_status IN (0, 7)
-        GROUP BY DATE_FORMAT(FROM_UNIXTIME(t_bike.heart_time), '%Y-%m-%d')
-        LIMIT 1
-    ),
-    vyruchka_payTabs_stripe AS ( 
-    SELECT
-        vyruchka_v_statuse_1.start_time,
-        vyruchka_v_statuse_1.vyruchka_v_statuse_1,
-        IFNULL(vozvraty.vozvraty,0) AS 'vozvraty', 
-        chastichno_vozvrascheny.chastichno_vozvrascheny AS 'chastichno_vozvrascheny',
-        IFNULL(vyruchka_v_statuse_1.vyruchka_v_statuse_1,0) + IFNULL(chastichno_vozvrascheny.chastichno_vozvrascheny,0) AS 'vyruchka_payTabs',
-        IFNULL(stripe_1.stripe_1, 0) AS 'stripe_1',
-        IFNULL(stripe_4.stripe_4, 0) AS 'stripe_4',
-        IFNULL(stripe_1.stripe_1, 0) - IFNULL(stripe_4.stripe_4, 0) AS 'vyruchka_stripe'
-    FROM 
-        (
-        SELECT 
-            DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
-            SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'vyruchka_v_statuse_1'
-        FROM t_trade
-        WHERE t_trade.status=1 AND t_trade.way=26 AND t_trade.`type` IN (1,2,6,7)
-        GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
-        ) AS vyruchka_v_statuse_1
-    LEFT JOIN 	
-        (SELECT 
-            DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
-            SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'vozvraty'
-         FROM t_trade
-         WHERE t_trade.status=4 AND t_trade.way=26
-         GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
-    ) AS vozvraty ON vyruchka_v_statuse_1.start_time=vozvraty.start_time
-    LEFT JOIN 
-        (SELECT 
-                DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
-            SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'stripe_1'
-         FROM t_trade
-         WHERE t_trade.status=1 AND t_trade.way=6
-         GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
-        ) AS stripe_1 ON vyruchka_v_statuse_1.start_time=stripe_1.start_time
-    LEFT JOIN 
-        (SELECT 
-                DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
-            SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'stripe_4'
-         FROM t_trade
-         WHERE t_trade.status=4 AND t_trade.way=6
-         GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
-        ) AS stripe_4 ON vyruchka_v_statuse_1.start_time=stripe_4.start_time
-    LEFT JOIN 
-        (
-        SELECT 
-            DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
-            SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'chastichno_vozvrascheny'
-        FROM t_trade
-        WHERE t_trade.status=3
-        GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
-        ) AS chastichno_vozvrascheny ON vyruchka_v_statuse_1.start_time = chastichno_vozvrascheny.start_time
-    ),
-    user_v_den_register AS (
-    SELECT 
-        DATE_FORMAT(t_user.register_date, '%Y-%m-%d') AS start_time,
-        COUNT(t_user.id) AS 'user_v_den_register'
-    FROM t_user
-    GROUP BY DATE_FORMAT(t_user.register_date, '%Y-%m-%d')
-    ),
-    kolichestvo_novyh_s_1_poezdkoy AS ( 
-        SELECT
-            register_date_as_start_date.start_date,
-            COUNT(DISTINCT register_date_as_start_date.uid) AS 'kolichestvo_novyh_s_1_poezdkoy',
-            COUNT(register_date_as_start_date.ride_amount) AS 'kolichestvo_poezdok_vsego'
-        FROM
-            (SELECT 
-                DATE(DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')) AS start_date, 
-                t_bike_use.*,
-                register_users.register_date,
-                register_users.id AS register_user_id
-            FROM t_bike_use
-            LEFT JOIN (
-                SELECT 
-                    DATE(DATE_FORMAT(t_user.register_date, '%Y-%m-%d')) AS register_date, 
-                    t_user.id
-                FROM t_user
-                                ) AS register_users
-            ON t_bike_use.uid=register_users.id
-            WHERE DATE(DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')) = DATE(DATE_FORMAT(register_users.register_date, '%Y-%m-%d')) 
-            AND t_bike_use.ride_status!=5
-            ) AS register_date_as_start_date
-        GROUP BY register_date_as_start_date.start_date
-    ),
-    dolgi AS (
-        SELECT 
-            DATE_FORMAT(t_payment_details.created, '%Y-%m-%d') AS 'create_debit_date', 
-            SUM(IFNULL(t_payment_details.debit_cash,0)) AS 'dolgi'
-        FROM t_payment_details
-        RIGHT JOIN (
-            SELECT 
-                t_bike_use.*
-            FROM t_bike_use
-            WHERE t_bike_use.ride_status = 2
-            ORDER BY t_bike_use.id DESC
-        ) AS dolgovye_poezdki
-        ON t_payment_details.user_id = dolgovye_poezdki.uid AND t_payment_details.ride_id = dolgovye_poezdki.id
-        GROUP BY DATE_FORMAT(t_payment_details.created, '%Y-%m-%d')
-    )
-    SELECT 
-        NOW() AS 'timestamp',
-        -- CAST(DATE_FORMAT(three_left_cols.start_time, '%Y-%m-%d %h:%m:%s') AS datetime) AS 'day_', 
-        IFNULL(three_left_cols.poezdok,0)  AS 'poezdok',
-        IFNULL(three_left_cols.poezdok / kvt.kvt,0) AS 'poezdok_v_srednem_na_samokat',
-        IFNULL((IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0) - IFNULL(three_left_cols.oplacheno_bonusami,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0)),0) / IFNULL(kvt.kvt,0) AS 'vyruchka_sim',
-        (IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) - IFNULL(three_left_cols.oplacheno_bonusami,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0)) / IFNULL(three_left_cols.poezdok,0) AS 'srednyaa_cena_poezdki',
-        -- IFNULL(three_left_cols.obzchaya_stoimost,0) AS 'obschaya_stoimost',
-        -- IFNULL(dolgi.dolgi,0) AS 'dolgi',
-        IFNULL(three_left_cols.oplacheno_bonusami,0) AS 'oplacheno_bonusami',
-        IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) AS 'vyruchka',
-        IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) - IFNULL(three_left_cols.oplacheno_bonusami,0) AS 'vyruchka_bez_bonusov',
-        IFNULL(three_left_cols.skidka,0) AS 'skidka',
-        IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) AS 'vyruchka_s_abonementov', 
-        -- IFNULL(sum_mnogor_abon.sum_mnogor_abon,0) AS 'vyruchka_s_mnogor_abonementov',
-        IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) - IFNULL(three_left_cols.oplacheno_bonusami,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(three_left_cols.skidka,0) AS 'vyruchka_bez_bonusov_vyruchka_s_abonementov',
-        SUM(IFNULL(three_left_cols.obzchaya_stoimost, 0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'vni',
-        SUM(IFNULL(three_left_cols.obzchaya_stoimost, 0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(three_left_cols.skidka,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) - SUM(IFNULL(three_left_cols.oplacheno_bonusami,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'vni_bez_bonusov',
-        --
-        -- vyruchka_payTabs_stripe.vyruchka_v_statuse_1,
-        -- vyruchka_payTabs_stripe.vozvraty,
-        -- vyruchka_payTabs_stripe.chastichno_vozvrascheny,
-        -- IFNULL(vyruchka_payTabs_stripe.vyruchka_v_statuse_1,0) - IFNULL(vyruchka_payTabs_stripe.vozvraty,0) AS 'vyruchka PayTabs_возвраты',
-        -- SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_v_statuse_1,0) - IFNULL(vyruchka_payTabs_stripe.vozvraty,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'obsch_PayTabs_возвраты',
-        IFNULL(vyruchka_payTabs_stripe.vyruchka_v_statuse_1,0) + IFNULL(vyruchka_payTabs_stripe.chastichno_vozvrascheny,0) AS 'vyruchka PayTabs',
-        SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_v_statuse_1,0) + IFNULL(vyruchka_payTabs_stripe.chastichno_vozvrascheny,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'obsch_PayTabs',
-        --
-        IFNULL(vyruchka_payTabs_stripe.vyruchka_stripe,0) AS 'vyruchka_Stripe',
-        SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_stripe,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'obsch_Stripe',
-        SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_payTabs,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) + SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_stripe,0) + IFNULL(vyruchka_payTabs_stripe.chastichno_vozvrascheny,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'obsch_PayTabs_i_obsch_Stripe',
-        IFNULL(kvt.kvt,0) AS 'kvt',
-        IFNULL(user_v_den_register.user_v_den_register,0) AS 'user_v_den',
-        SUM(IFNULL(user_v_den_register.user_v_den_register,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'user_v_den_obshc',
-        IFNULL(three_left_cols.obschee_vremya_min,0) AS 'obcshee_vrmeya_min',
-        IFNULL(three_left_cols.obschee_vremya_min,0) / IFNULL(three_left_cols.poezdok,0) AS 'srednyee_vremya_poezdki',
-        IFNULL(kolichestvo_novyh_s_1_poezdkoy.kolichestvo_novyh_s_1_poezdkoy,0) AS 'iz_nih_usero_sovershivshih_poezdki_vsego',
-        IFNULL(kolichestvo_novyh_s_1_poezdkoy.kolichestvo_poezdok_vsego,0) AS 'kol_vo_poezdok_vsego',
-        IFNULL(ROUND((IFNULL(kolichestvo_novyh_s_1_poezdkoy.kolichestvo_novyh_s_1_poezdkoy,0) / IFNULL(user_v_den_register.user_v_den_register,0)) * 100, 2),0) AS 'proniknovenie',
-        IFNULL(ROUND(IFNULL(kolichestvo_novyh_s_1_poezdkoy.kolichestvo_poezdok_vsego,0) / IFNULL(kolichestvo_novyh_s_1_poezdkoy.kolichestvo_novyh_s_1_poezdkoy,0), 2),0) AS 'poezdok_novyi_user'
-    FROM three_left_cols
-    LEFT JOIN sum_uspeh_abon ON three_left_cols.start_time = sum_uspeh_abon.start_time
-    LEFT JOIN sum_mnogor_abon ON three_left_cols.start_time = sum_mnogor_abon.start_time
-    LEFT JOIN kvt ON three_left_cols.start_time = kvt.start_time
-    LEFT JOIN vyruchka_payTabs_stripe ON three_left_cols.start_time = vyruchka_payTabs_stripe.start_time
-    LEFT JOIN user_v_den_register ON three_left_cols.start_time = user_v_den_register.start_time
-    LEFT JOIN kolichestvo_novyh_s_1_poezdkoy ON three_left_cols.start_time = kolichestvo_novyh_s_1_poezdkoy.start_date
-    LEFT JOIN dolgi ON three_left_cols.start_time = dolgi.create_debit_date
-    -- WHERE DATE_FORMAT(NOW(), '%Y-%m-%d') = three_left_cols.start_time
-    ORDER BY three_left_cols.start_time DESC
-    LIMIT 1
-	    """
 
     url = get_mysql_url()
     url = sa.engine.make_url(url)
     url = url.set(drivername="mysql+mysqlconnector")
     engine_mysql = sa.create_engine(url)
-    df_vni = pd.read_sql(select_vni_total, engine_mysql)
 
-    # Загрузка за сегодня в Postgres
     url = get_postgres_url()
     url = sa.engine.make_url(url)
     url = url.set(drivername="postgresql+psycopg")
     engine_postgresql = sa.create_engine(url)
-    df_vni.to_sql("vni_total", engine_postgresql, if_exists="append", index=False)
-    
-    print('Got it: VNI_total')
 
-    select_vni_cities = '''
-    WITH three_left_cols AS 
-    (    
-        SELECT 
-            three_left_cols.start_time,
-            three_left_cols.city_id,
-            three_left_cols.poezdok,
-            three_left_cols.obzchaya_stoimost,
-            SUM(IFNULL(three_left_cols.obzchaya_stoimost, 0)) OVER(PARTITION BY three_left_cols.city_id ORDER BY three_left_cols.start_time) AS 'obzchaya_stoimost_ni',
-            SUM(IFNULL(three_left_cols.oplacheno_bonusami, 0)) OVER(PARTITION BY three_left_cols.city_id ORDER BY three_left_cols.start_time) AS 'oplacheno_bonusami_ni',
-            three_left_cols.oplacheno_bonusami,
-            three_left_cols.obschee_vremya_min,
-            IFNULL(three_left_cols.skidka,0) AS 'skidka',
-            SUM(IFNULL(three_left_cols.skidka, 0)) OVER(PARTITION BY three_left_cols.city_id ORDER BY three_left_cols.start_time) AS 'skidka_ni'
+    try:
+        # Выгрузка за сегодня из MySQL ВНИ Общий
+        select_vni_total = """
+        -- ВНИ Общий
+        WITH three_left_cols AS (
+            SELECT 
+                DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') AS  'start_time',
+                COUNT(t_bike_use.ride_amount) AS 'poezdok',
+                SUM(IFNULL(t_bike_use.ride_amount,0)) AS 'obzchaya_stoimost',
+                SUM(IFNULL(t_bike_use.discount,0)) AS 'oplacheno_bonusami',
+                SUM(IFNULL(t_bike_use.duration,0)) / 60 AS 'obschee_vremya_min',
+                SUM(IFNULL(tpd.bike_discount_amount,0)) AS skidka 
+                FROM shamri.t_bike_use
+            LEFT JOIN shamri.t_payment_details tpd ON t_bike_use.id = tpd.ride_id 
+            WHERE t_bike_use.ride_status!=5 AND DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') >= '2024-07-21'
+            GROUP BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')
+        ),
+        sum_uspeh_abon AS(
+            SELECT 
+                DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
+                sum(IFNULL(t_trade.amount,0)) AS vyruchka_s_abonementov
+            FROM t_trade
+            WHERE t_trade.`type` = 6 AND t_trade.status = 1
+            GROUP BY start_time
+            ),
+        sum_mnogor_abon AS (
+            SELECT 
+                DATE_FORMAT(t_subscription_mapping.start_time, '%Y-%m-%d') AS start_time,
+                sum(IFNULL(t_subscription.price,0)) AS sum_mnogor_abon
+            FROM t_subscription_mapping
+            LEFT JOIN t_subscription ON t_subscription_mapping.subscription_id = t_subscription.id
+            GROUP BY DATE_FORMAT(t_subscription_mapping.start_time, '%Y-%m-%d')
+        ),
+        kvt AS (
+            SELECT 
+                DATE_FORMAT(FROM_UNIXTIME(t_bike.heart_time), '%Y-%m-%d') AS start_time,
+                COUNT(t_bike.id) AS kvt
+            FROM t_bike
+            WHERE TIMESTAMPDIFF(SECOND, now(), DATE_FORMAT(FROM_UNIXTIME(t_bike.g_time), '%Y-%m-%d %H:%m:%s')) < 900 AND t_bike.error_status IN (0, 7)
+            GROUP BY DATE_FORMAT(FROM_UNIXTIME(t_bike.heart_time), '%Y-%m-%d')
+            LIMIT 1
+        ),
+        vyruchka_payTabs_stripe AS ( 
+        SELECT
+            vyruchka_v_statuse_1.start_time,
+            vyruchka_v_statuse_1.vyruchka_v_statuse_1,
+            IFNULL(vozvraty.vozvraty,0) AS 'vozvraty', 
+            chastichno_vozvrascheny.chastichno_vozvrascheny AS 'chastichno_vozvrascheny',
+            IFNULL(vyruchka_v_statuse_1.vyruchka_v_statuse_1,0) + IFNULL(chastichno_vozvrascheny.chastichno_vozvrascheny,0) AS 'vyruchka_payTabs',
+            IFNULL(stripe_1.stripe_1, 0) AS 'stripe_1',
+            IFNULL(stripe_4.stripe_4, 0) AS 'stripe_4',
+            IFNULL(stripe_1.stripe_1, 0) - IFNULL(stripe_4.stripe_4, 0) AS 'vyruchka_stripe'
         FROM 
             (
-                SELECT 
-                    DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') AS  'start_time',
-                    t_bike.city_id,
-                    COUNT(t_bike_use.ride_amount) AS 'poezdok',
-                    SUM(IFNULL(t_bike_use.ride_amount,0)) AS 'obzchaya_stoimost',
-                    SUM(IFNULL(t_bike_use.discount,0)) AS 'oplacheno_bonusami',
-                    SUM(IFNULL(t_bike_use.duration,0)) / 60 AS 'obschee_vremya_min',
-                    SUM(IFNULL(tpd.bike_discount_amount,0)) AS skidka
-                FROM shamri.t_bike_use
-                LEFT JOIN t_bike ON t_bike_use.bid = t_bike.id
-                LEFT JOIN shamri.t_payment_details tpd ON t_bike_use.id = tpd.ride_id
-                WHERE 
-                t_bike_use.ride_status!=5 
-                AND 
-                DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') >= '2024-07-21'
-                GROUP BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d'), t_bike.city_id
-            ) AS three_left_cols
-        ORDER BY three_left_cols.start_time DESC
-    ),
-    sum_uspeh_abon AS (
+            SELECT 
+                DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
+                SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'vyruchka_v_statuse_1'
+            FROM t_trade
+            WHERE t_trade.status=1 AND t_trade.way=26 AND t_trade.`type` IN (1,2,6,7)
+            GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
+            ) AS vyruchka_v_statuse_1
+        LEFT JOIN 	
+            (SELECT 
+                DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
+                SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'vozvraty'
+             FROM t_trade
+             WHERE t_trade.status=4 AND t_trade.way=26
+             GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
+        ) AS vozvraty ON vyruchka_v_statuse_1.start_time=vozvraty.start_time
+        LEFT JOIN 
+            (SELECT 
+                    DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
+                SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'stripe_1'
+             FROM t_trade
+             WHERE t_trade.status=1 AND t_trade.way=6
+             GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
+            ) AS stripe_1 ON vyruchka_v_statuse_1.start_time=stripe_1.start_time
+        LEFT JOIN 
+            (SELECT 
+                    DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
+                SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'stripe_4'
+             FROM t_trade
+             WHERE t_trade.status=4 AND t_trade.way=6
+             GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
+            ) AS stripe_4 ON vyruchka_v_statuse_1.start_time=stripe_4.start_time
+        LEFT JOIN 
+            (
+            SELECT 
+                DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
+                SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'chastichno_vozvrascheny'
+            FROM t_trade
+            WHERE t_trade.status=3
+            GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
+            ) AS chastichno_vozvrascheny ON vyruchka_v_statuse_1.start_time = chastichno_vozvrascheny.start_time
+        ),
+        user_v_den_register AS (
         SELECT 
-            distr_poezdki_po_gorodam.start_time,
-            distr_poezdki_po_gorodam.city_id,
-            distr_poezdki_po_gorodam.poezdok,
-            distr_poezdki_po_gorodam.coef_goroda,
-            sum_uspeh_abon.vyruchka_s_abonementov AS 'vyruchka_s_abonementov_po_vsem_gorodam',
-            distr_poezdki_po_gorodam.coef_goroda AS 'coef_goroda_vyruchka_s_abonementov_po_vsem_gorodam',
-            sum_uspeh_abon.vyruchka_s_abonementov * distr_poezdki_po_gorodam.coef_goroda AS 'vyruchka_s_abonementov',
-            SUM(IFNULL(sum_uspeh_abon.vyruchka_s_abonementov, 0) * IFNULL(distr_poezdki_po_gorodam.coef_goroda,0)) OVER (PARTITION BY distr_poezdki_po_gorodam.city_id ORDER BY distr_poezdki_po_gorodam.start_time) AS 'vyruchka_s_abonementov_ni'
-        FROM (
-            -- высчитываю пропорции по поездкам
+            DATE_FORMAT(t_user.register_date, '%Y-%m-%d') AS start_time,
+            COUNT(t_user.id) AS 'user_v_den_register'
+        FROM t_user
+        GROUP BY DATE_FORMAT(t_user.register_date, '%Y-%m-%d')
+        ),
+        kolichestvo_novyh_s_1_poezdkoy AS ( 
+            SELECT
+                register_date_as_start_date.start_date,
+                COUNT(DISTINCT register_date_as_start_date.uid) AS 'kolichestvo_novyh_s_1_poezdkoy',
+                COUNT(register_date_as_start_date.ride_amount) AS 'kolichestvo_poezdok_vsego'
+            FROM
+                (SELECT 
+                    DATE(DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')) AS start_date, 
+                    t_bike_use.*,
+                    register_users.register_date,
+                    register_users.id AS register_user_id
+                FROM t_bike_use
+                LEFT JOIN (
+                    SELECT 
+                        DATE(DATE_FORMAT(t_user.register_date, '%Y-%m-%d')) AS register_date, 
+                        t_user.id
+                    FROM t_user
+                                    ) AS register_users
+                ON t_bike_use.uid=register_users.id
+                WHERE DATE(DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')) = DATE(DATE_FORMAT(register_users.register_date, '%Y-%m-%d')) 
+                AND t_bike_use.ride_status!=5
+                ) AS register_date_as_start_date
+            GROUP BY register_date_as_start_date.start_date
+        ),
+        dolgi AS (
+            SELECT 
+                DATE_FORMAT(t_payment_details.created, '%Y-%m-%d') AS 'create_debit_date', 
+                SUM(IFNULL(t_payment_details.debit_cash,0)) AS 'dolgi'
+            FROM t_payment_details
+            RIGHT JOIN (
+                SELECT 
+                    t_bike_use.*
+                FROM t_bike_use
+                WHERE t_bike_use.ride_status = 2
+                ORDER BY t_bike_use.id DESC
+            ) AS dolgovye_poezdki
+            ON t_payment_details.user_id = dolgovye_poezdki.uid AND t_payment_details.ride_id = dolgovye_poezdki.id
+            GROUP BY DATE_FORMAT(t_payment_details.created, '%Y-%m-%d')
+        )
+        SELECT 
+            NOW() AS 'timestamp',
+            -- CAST(DATE_FORMAT(three_left_cols.start_time, '%Y-%m-%d %h:%m:%s') AS datetime) AS 'day_', 
+            IFNULL(three_left_cols.poezdok,0)  AS 'poezdok',
+            IFNULL(three_left_cols.poezdok / kvt.kvt,0) AS 'poezdok_v_srednem_na_samokat',
+            IFNULL((IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0) - IFNULL(three_left_cols.oplacheno_bonusami,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0)),0) / IFNULL(kvt.kvt,0) AS 'vyruchka_sim',
+            (IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) - IFNULL(three_left_cols.oplacheno_bonusami,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0)) / IFNULL(three_left_cols.poezdok,0) AS 'srednyaa_cena_poezdki',
+            -- IFNULL(three_left_cols.obzchaya_stoimost,0) AS 'obschaya_stoimost',
+            -- IFNULL(dolgi.dolgi,0) AS 'dolgi',
+            IFNULL(three_left_cols.oplacheno_bonusami,0) AS 'oplacheno_bonusami',
+            IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) AS 'vyruchka',
+            IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) - IFNULL(three_left_cols.oplacheno_bonusami,0) AS 'vyruchka_bez_bonusov',
+            IFNULL(three_left_cols.skidka,0) AS 'skidka',
+            IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) AS 'vyruchka_s_abonementov', 
+            -- IFNULL(sum_mnogor_abon.sum_mnogor_abon,0) AS 'vyruchka_s_mnogor_abonementov',
+            IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) - IFNULL(three_left_cols.oplacheno_bonusami,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(three_left_cols.skidka,0) AS 'vyruchka_bez_bonusov_vyruchka_s_abonementov',
+            SUM(IFNULL(three_left_cols.obzchaya_stoimost, 0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'vni',
+            SUM(IFNULL(three_left_cols.obzchaya_stoimost, 0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(three_left_cols.skidka,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) - SUM(IFNULL(three_left_cols.oplacheno_bonusami,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'vni_bez_bonusov',
+            -- vyruchka_payTabs_stripe.vyruchka_v_statuse_1,
+            -- vyruchka_payTabs_stripe.vozvraty,
+            -- vyruchka_payTabs_stripe.chastichno_vozvrascheny,
+            -- IFNULL(vyruchka_payTabs_stripe.vyruchka_v_statuse_1,0) - IFNULL(vyruchka_payTabs_stripe.vozvraty,0) AS 'vyruchka PayTabs_возвраты',
+            -- SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_v_statuse_1,0) - IFNULL(vyruchka_payTabs_stripe.vozvraty,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'obsch_PayTabs_возвраты',
+            IFNULL(vyruchka_payTabs_stripe.vyruchka_v_statuse_1,0) + IFNULL(vyruchka_payTabs_stripe.chastichno_vozvrascheny,0) AS 'vyruchka PayTabs',
+            SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_v_statuse_1,0) + IFNULL(vyruchka_payTabs_stripe.chastichno_vozvrascheny,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'obsch_PayTabs',
+            IFNULL(vyruchka_payTabs_stripe.vyruchka_stripe,0) AS 'vyruchka_Stripe',
+            SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_stripe,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'obsch_Stripe',
+            SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_payTabs,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) + SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_stripe,0) + IFNULL(vyruchka_payTabs_stripe.chastichno_vozvrascheny,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'obsch_PayTabs_i_obsch_Stripe',
+            IFNULL(kvt.kvt,0) AS 'kvt',
+            IFNULL(user_v_den_register.user_v_den_register,0) AS 'user_v_den',
+            SUM(IFNULL(user_v_den_register.user_v_den_register,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'user_v_den_obshc',
+            IFNULL(three_left_cols.obschee_vremya_min,0) AS 'obcshee_vrmeya_min',
+            IFNULL(three_left_cols.obschee_vremya_min,0) / IFNULL(three_left_cols.poezdok,0) AS 'srednyee_vremya_poezdki',
+            IFNULL(kolichestvo_novyh_s_1_poezdkoy.kolichestvo_novyh_s_1_poezdkoy,0) AS 'iz_nih_usero_sovershivshih_poezdki_vsego',
+            IFNULL(kolichestvo_novyh_s_1_poezdkoy.kolichestvo_poezdok_vsego,0) AS 'kol_vo_poezdok_vsego',
+            IFNULL(ROUND((IFNULL(kolichestvo_novyh_s_1_poezdkoy.kolichestvo_novyh_s_1_poezdkoy,0) / IFNULL(user_v_den_register.user_v_den_register,0)) * 100, 2),0) AS 'proniknovenie',
+            IFNULL(ROUND(IFNULL(kolichestvo_novyh_s_1_poezdkoy.kolichestvo_poezdok_vsego,0) / IFNULL(kolichestvo_novyh_s_1_poezdkoy.kolichestvo_novyh_s_1_poezdkoy,0), 2),0) AS 'poezdok_novyi_user'
+        FROM three_left_cols
+        LEFT JOIN sum_uspeh_abon ON three_left_cols.start_time = sum_uspeh_abon.start_time
+        LEFT JOIN sum_mnogor_abon ON three_left_cols.start_time = sum_mnogor_abon.start_time
+        LEFT JOIN kvt ON three_left_cols.start_time = kvt.start_time
+        LEFT JOIN vyruchka_payTabs_stripe ON three_left_cols.start_time = vyruchka_payTabs_stripe.start_time
+        LEFT JOIN user_v_den_register ON three_left_cols.start_time = user_v_den_register.start_time
+        LEFT JOIN kolichestvo_novyh_s_1_poezdkoy ON three_left_cols.start_time = kolichestvo_novyh_s_1_poezdkoy.start_date
+        LEFT JOIN dolgi ON three_left_cols.start_time = dolgi.create_debit_date
+        -- WHERE DATE_FORMAT(NOW(), '%Y-%m-%d') = three_left_cols.start_time
+        ORDER BY three_left_cols.start_time DESC
+        LIMIT 1
+            """
+        df_vni = pd.read_sql(select_vni_total, engine_mysql)
+
+        # Загрузка за сегодня в Postgres
+        df_vni.to_sql("vni_total", engine_postgresql, if_exists="append", index=False)
+        print('Got it: VNI_total')
+    except Exception as e:
+        print(f"Произошла ошибка VNI_total: {e}")
+        pass
+
+    try:
+        select_vni_cities = '''
+        WITH three_left_cols AS 
+        (    
+            SELECT 
+                three_left_cols.start_time,
+                three_left_cols.city_id,
+                three_left_cols.poezdok,
+                three_left_cols.obzchaya_stoimost,
+                SUM(IFNULL(three_left_cols.obzchaya_stoimost, 0)) OVER(PARTITION BY three_left_cols.city_id ORDER BY three_left_cols.start_time) AS 'obzchaya_stoimost_ni',
+                SUM(IFNULL(three_left_cols.oplacheno_bonusami, 0)) OVER(PARTITION BY three_left_cols.city_id ORDER BY three_left_cols.start_time) AS 'oplacheno_bonusami_ni',
+                three_left_cols.oplacheno_bonusami,
+                three_left_cols.obschee_vremya_min,
+                IFNULL(three_left_cols.skidka,0) AS 'skidka',
+                SUM(IFNULL(three_left_cols.skidka, 0)) OVER(PARTITION BY three_left_cols.city_id ORDER BY three_left_cols.start_time) AS 'skidka_ni'
+            FROM 
+                (
+                    SELECT 
+                        DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') AS  'start_time',
+                        t_bike.city_id,
+                        COUNT(t_bike_use.ride_amount) AS 'poezdok',
+                        SUM(IFNULL(t_bike_use.ride_amount,0)) AS 'obzchaya_stoimost',
+                        SUM(IFNULL(t_bike_use.discount,0)) AS 'oplacheno_bonusami',
+                        SUM(IFNULL(t_bike_use.duration,0)) / 60 AS 'obschee_vremya_min',
+                        SUM(IFNULL(tpd.bike_discount_amount,0)) AS skidka
+                    FROM shamri.t_bike_use
+                    LEFT JOIN t_bike ON t_bike_use.bid = t_bike.id
+                    LEFT JOIN shamri.t_payment_details tpd ON t_bike_use.id = tpd.ride_id
+                    WHERE 
+                    t_bike_use.ride_status!=5 
+                    AND 
+                    DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') >= '2024-07-21'
+                    GROUP BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d'), t_bike.city_id
+                ) AS three_left_cols
+            ORDER BY three_left_cols.start_time DESC
+        ),
+        sum_uspeh_abon AS (
             SELECT 
                 distr_poezdki_po_gorodam.start_time,
                 distr_poezdki_po_gorodam.city_id,
                 distr_poezdki_po_gorodam.poezdok,
-                distr_poezdki_po_gorodam.poezdok / SUM(distr_poezdki_po_gorodam.poezdok) OVER (PARTITION BY distr_poezdki_po_gorodam.start_time) AS 'coef_goroda'
-            FROM 
-                (
+                distr_poezdki_po_gorodam.coef_goroda,
+                sum_uspeh_abon.vyruchka_s_abonementov AS 'vyruchka_s_abonementov_po_vsem_gorodam',
+                distr_poezdki_po_gorodam.coef_goroda AS 'coef_goroda_vyruchka_s_abonementov_po_vsem_gorodam',
+                sum_uspeh_abon.vyruchka_s_abonementov * distr_poezdki_po_gorodam.coef_goroda AS 'vyruchka_s_abonementov',
+                SUM(IFNULL(sum_uspeh_abon.vyruchka_s_abonementov, 0) * IFNULL(distr_poezdki_po_gorodam.coef_goroda,0)) OVER (PARTITION BY distr_poezdki_po_gorodam.city_id ORDER BY distr_poezdki_po_gorodam.start_time) AS 'vyruchka_s_abonementov_ni'
+            FROM (
+                -- высчитываю пропорции по поездкам
                 SELECT 
+                    distr_poezdki_po_gorodam.start_time,
+                    distr_poezdki_po_gorodam.city_id,
+                    distr_poezdki_po_gorodam.poezdok,
+                    distr_poezdki_po_gorodam.poezdok / SUM(distr_poezdki_po_gorodam.poezdok) OVER (PARTITION BY distr_poezdki_po_gorodam.start_time) AS 'coef_goroda'
+                FROM 
+                    (
+                    SELECT 
+                        DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') AS  'start_time',
+                        t_bike.city_id,
+                        COUNT(t_bike_use.ride_amount) AS 'poezdok'
+                    FROM shamri.t_bike_use
+                    LEFT JOIN t_bike ON t_bike_use.bid = t_bike.id
+                    WHERE t_bike_use.ride_status!=5 
+                        AND DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') >= '2024-07-21'
+                    GROUP BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d'), t_bike.city_id
+                    ORDER BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') DESC
+                    ) 
+                    AS distr_poezdki_po_gorodam
+                ORDER BY distr_poezdki_po_gorodam.start_time DESC
+            ) AS distr_poezdki_po_gorodam
+            LEFT JOIN (
+                SELECT 
+                    DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
+                    sum(IFNULL(t_trade.amount,0)) AS vyruchka_s_abonementov
+                FROM shamri.t_trade
+                WHERE t_trade.`type` = 6 
+                    AND t_trade.status = 1 
+                     AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
+                GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
+                ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC
+            ) AS sum_uspeh_abon
+            ON distr_poezdki_po_gorodam.start_time = sum_uspeh_abon.start_time
+            ORDER BY distr_poezdki_po_gorodam.start_time DESC
+        ),
+        sum_mnogor_abon AS (
+            SELECT 
+                distr_poezdki_po_gorodam.start_time,
+                distr_poezdki_po_gorodam.city_id,
+                distr_poezdki_po_gorodam.poezdok,
+                distr_poezdki_po_gorodam.coef_goroda,
+                sum_mnogor_abon.sum_mnogor_abon AS 'sum_mnogor_abon_po_vsem_gorodam',
+                sum_mnogor_abon.sum_mnogor_abon * distr_poezdki_po_gorodam.coef_goroda AS 'sum_mnogor_abon',
+                SUM(IFNULL(sum_mnogor_abon.sum_mnogor_abon,0) * IFNULL(distr_poezdki_po_gorodam.coef_goroda,0)) OVER (PARTITION BY distr_poezdki_po_gorodam.city_id ORDER BY distr_poezdki_po_gorodam.start_time) AS 'sum_mnogor_abon_ni'
+            FROM (
+        -- высчитываю пропорции по поездкам
+            SELECT 
+                distr_poezdki_po_gorodam.start_time,
+                distr_poezdki_po_gorodam.city_id,
+                distr_poezdki_po_gorodam.poezdok,
+                distr_poezdki_po_gorodam.poezdok / SUM(IFNULL(distr_poezdki_po_gorodam.poezdok,0)) OVER (PARTITION BY distr_poezdki_po_gorodam.start_time) AS 'coef_goroda'
+            FROM 
+                (SELECT 
                     DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') AS  'start_time',
                     t_bike.city_id,
                     COUNT(t_bike_use.ride_amount) AS 'poezdok'
@@ -408,127 +454,42 @@ def main():
                 WHERE t_bike_use.ride_status!=5 
                     AND DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') >= '2024-07-21'
                 GROUP BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d'), t_bike.city_id
-                ORDER BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') DESC
-                ) 
+                ORDER BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') DESC) 
                 AS distr_poezdki_po_gorodam
             ORDER BY distr_poezdki_po_gorodam.start_time DESC
-        ) AS distr_poezdki_po_gorodam
-        LEFT JOIN (
+            ) AS distr_poezdki_po_gorodam
+            LEFT JOIN (
+                SELECT 
+                    DATE_FORMAT(t_subscription_mapping.start_time, '%Y-%m-%d') AS start_time,
+                    SUM(IFNULL(t_subscription.price,0)) AS sum_mnogor_abon
+                FROM t_subscription_mapping
+                LEFT JOIN t_subscription ON t_subscription_mapping.subscription_id = t_subscription.id
+                WHERE DATE_FORMAT(t_subscription_mapping.start_time, '%Y-%m-%d') >= '2024-07-21'
+                GROUP BY DATE_FORMAT(t_subscription_mapping.start_time, '%Y-%m-%d')
+                ORDER BY DATE_FORMAT(t_subscription_mapping.start_time, '%Y-%m-%d') DESC
+                ) AS sum_mnogor_abon
+            ON distr_poezdki_po_gorodam.start_time = sum_mnogor_abon.start_time
+            ORDER BY distr_poezdki_po_gorodam.start_time DESC
+        ),
+        kvt AS (
             SELECT 
-                DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
-                sum(IFNULL(t_trade.amount,0)) AS vyruchka_s_abonementov
-            FROM shamri.t_trade
-            WHERE t_trade.`type` = 6 
-                AND t_trade.status = 1 
-                 AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
-            GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
-            ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC
-        ) AS sum_uspeh_abon
-        ON distr_poezdki_po_gorodam.start_time = sum_uspeh_abon.start_time
-        ORDER BY distr_poezdki_po_gorodam.start_time DESC
-    ),
-    sum_mnogor_abon AS (
-        SELECT 
-            distr_poezdki_po_gorodam.start_time,
-            distr_poezdki_po_gorodam.city_id,
-            distr_poezdki_po_gorodam.poezdok,
-            distr_poezdki_po_gorodam.coef_goroda,
-            sum_mnogor_abon.sum_mnogor_abon AS 'sum_mnogor_abon_po_vsem_gorodam',
-            sum_mnogor_abon.sum_mnogor_abon * distr_poezdki_po_gorodam.coef_goroda AS 'sum_mnogor_abon',
-            SUM(IFNULL(sum_mnogor_abon.sum_mnogor_abon,0) * IFNULL(distr_poezdki_po_gorodam.coef_goroda,0)) OVER (PARTITION BY distr_poezdki_po_gorodam.city_id ORDER BY distr_poezdki_po_gorodam.start_time) AS 'sum_mnogor_abon_ni'
-        FROM (
-    -- высчитываю пропорции по поездкам
-        SELECT 
-            distr_poezdki_po_gorodam.start_time,
-            distr_poezdki_po_gorodam.city_id,
-            distr_poezdki_po_gorodam.poezdok,
-            distr_poezdki_po_gorodam.poezdok / SUM(IFNULL(distr_poezdki_po_gorodam.poezdok,0)) OVER (PARTITION BY distr_poezdki_po_gorodam.start_time) AS 'coef_goroda'
-        FROM 
-            (SELECT 
-                DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') AS  'start_time',
+                DATE_FORMAT(FROM_UNIXTIME(t_bike.heart_time), '%Y-%m-%d') AS start_time,
                 t_bike.city_id,
-                COUNT(t_bike_use.ride_amount) AS 'poezdok'
-            FROM shamri.t_bike_use
-            LEFT JOIN t_bike ON t_bike_use.bid = t_bike.id
-            WHERE t_bike_use.ride_status!=5 
-                AND DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') >= '2024-07-21'
-            GROUP BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d'), t_bike.city_id
-            ORDER BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') DESC) 
-            AS distr_poezdki_po_gorodam
-        ORDER BY distr_poezdki_po_gorodam.start_time DESC
-        ) AS distr_poezdki_po_gorodam
-        LEFT JOIN (
-            SELECT 
-                DATE_FORMAT(t_subscription_mapping.start_time, '%Y-%m-%d') AS start_time,
-                SUM(IFNULL(t_subscription.price,0)) AS sum_mnogor_abon
-            FROM t_subscription_mapping
-            LEFT JOIN t_subscription ON t_subscription_mapping.subscription_id = t_subscription.id
-            WHERE DATE_FORMAT(t_subscription_mapping.start_time, '%Y-%m-%d') >= '2024-07-21'
-            GROUP BY DATE_FORMAT(t_subscription_mapping.start_time, '%Y-%m-%d')
-            ORDER BY DATE_FORMAT(t_subscription_mapping.start_time, '%Y-%m-%d') DESC
-            ) AS sum_mnogor_abon
-        ON distr_poezdki_po_gorodam.start_time = sum_mnogor_abon.start_time
-        ORDER BY distr_poezdki_po_gorodam.start_time DESC
-    ),
-    kvt AS (
-        SELECT 
-            DATE_FORMAT(FROM_UNIXTIME(t_bike.heart_time), '%Y-%m-%d') AS start_time,
-            t_bike.city_id,
-            COUNT(t_bike.id) AS kvt
-        FROM t_bike
-        WHERE TIMESTAMPDIFF(SECOND, now(), DATE_FORMAT(FROM_UNIXTIME(t_bike.g_time), '%Y-%m-%d %H:%m:%s')) < 900 
-            AND t_bike.error_status IN (0, 7) 
-        GROUP BY DATE_FORMAT(FROM_UNIXTIME(t_bike.heart_time), '%Y-%m-%d'), t_bike.city_id
-        HAVING start_time = DATE_FORMAT(NOW(), '%Y-%m-%d')
-        ORDER BY t_bike.city_id DESC
-    ),
-    vyruchka_uspeh_payTabs AS 
-    (
-        SELECT
-            vyruchka_uspeh_payTabs.start_time,
-            vyruchka_uspeh_payTabs.city_id,
-            vyruchka_uspeh_payTabs.vyruchka_v_statuse_1_payTabs,
-            chastichno_vozvrascheny.chastichno_vozvrascheny AS 'chastichno_vozvrascheny'
-        FROM
-            (SELECT 
-                DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
-                t_trade.city_id,
-                SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'vyruchka_v_statuse_1_payTabs'
-            FROM t_trade
-            WHERE t_trade.status=1 
-                AND t_trade.way=26 
-                AND t_trade.`type` IN (1,2,6,7)
-                AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
-            GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
-            ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC, t_trade.city_id DESC
-            ) AS vyruchka_uspeh_payTabs
-        LEFT JOIN 
-            (
-            SELECT
-                DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
-                t_trade.city_id,
-                SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'chastichno_vozvrascheny'
-            FROM t_trade
-            WHERE t_trade.status=3
-                AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
-            GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
-            ) AS chastichno_vozvrascheny ON vyruchka_uspeh_payTabs.start_time = chastichno_vozvrascheny.start_time AND vyruchka_uspeh_payTabs.city_id = chastichno_vozvrascheny.city_id
-    ),
-    vyruchka_uspeh_payTabs_ni AS 
-    (
-         SELECT
-             vyruchka_uspeh_payTabs.city_id,
-             vyruchka_uspeh_payTabs.start_time, 
-             IFNULL(vyruchka_uspeh_payTabs.chastichno_vozvrascheny,0) AS 'chastichno_vozvrascheny',
-            vyruchka_uspeh_payTabs.vyruchka_v_statuse_1_payTabs_ni AS 'vyruchka_v_statuse_1_payTabs_ni'
-         FROM 
-            (
+                COUNT(t_bike.id) AS kvt
+            FROM t_bike
+            WHERE TIMESTAMPDIFF(SECOND, now(), DATE_FORMAT(FROM_UNIXTIME(t_bike.g_time), '%Y-%m-%d %H:%m:%s')) < 900 
+                AND t_bike.error_status IN (0, 7) 
+            GROUP BY DATE_FORMAT(FROM_UNIXTIME(t_bike.heart_time), '%Y-%m-%d'), t_bike.city_id
+            HAVING start_time = DATE_FORMAT(NOW(), '%Y-%m-%d')
+            ORDER BY t_bike.city_id DESC
+        ),
+        vyruchka_uspeh_payTabs AS 
+        (
             SELECT
                 vyruchka_uspeh_payTabs.start_time,
                 vyruchka_uspeh_payTabs.city_id,
                 vyruchka_uspeh_payTabs.vyruchka_v_statuse_1_payTabs,
-                chastichno_vozvrascheny.chastichno_vozvrascheny,
-                SUM(IFNULL(vyruchka_uspeh_payTabs.vyruchka_v_statuse_1_payTabs,0) + IFNULL(chastichno_vozvrascheny.chastichno_vozvrascheny,0)) OVER (PARTITION BY vyruchka_uspeh_payTabs.city_id ORDER BY vyruchka_uspeh_payTabs.start_time) AS 'vyruchka_v_statuse_1_payTabs_ni'
+                chastichno_vozvrascheny.chastichno_vozvrascheny AS 'chastichno_vozvrascheny'
             FROM
                 (SELECT 
                     DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
@@ -537,12 +498,13 @@ def main():
                 FROM t_trade
                 WHERE t_trade.status=1 
                     AND t_trade.way=26 
-                    AND t_trade.`type` IN (1,2,6,7) 
-                    AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21' 
+                    AND t_trade.`type` IN (1,2,6,7)
+                    AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
                 GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
-                ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC, t_trade.city_id DESC) AS vyruchka_uspeh_payTabs
+                ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC, t_trade.city_id DESC
+                ) AS vyruchka_uspeh_payTabs
             LEFT JOIN 
-            (
+                (
                 SELECT
                     DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
                     t_trade.city_id,
@@ -552,34 +514,50 @@ def main():
                     AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
                 GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
                 ) AS chastichno_vozvrascheny ON vyruchka_uspeh_payTabs.start_time = chastichno_vozvrascheny.start_time AND vyruchka_uspeh_payTabs.city_id = chastichno_vozvrascheny.city_id
-                )
-            AS vyruchka_uspeh_payTabs
-    ),
-    vosvraty_payTabs AS ( 
-        SELECT
-            trade.start_time,
-            trade.city_id,
-            trade.vozvraty_payTabs,
-            SUM(IFNULL(trade.vozvraty_payTabs,0)) OVER (PARTITION BY trade.city_id ORDER BY trade.start_time) AS 'vozvraty_payTabs_ni'
-        FROM
-            (SELECT
-                DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
-                t_trade.city_id,
-                SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'vozvraty_payTabs'
-            FROM t_trade
-            WHERE t_trade.status=4 
-                 AND t_trade.way=26 
-                 AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
-            GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
-            ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade
-     ),
-     vozvraty_payTabs_ni AS (
-         SELECT
-             vozvraty_payTabs.city_id,
-             vozvraty_payTabs.start_time,
-             vozvraty_payTabs.vozvraty_payTabs_ni
-         FROM 
-            (SELECT
+        ),
+        vyruchka_uspeh_payTabs_ni AS 
+        (
+             SELECT
+                 vyruchka_uspeh_payTabs.city_id,
+                 vyruchka_uspeh_payTabs.start_time, 
+                 IFNULL(vyruchka_uspeh_payTabs.chastichno_vozvrascheny,0) AS 'chastichno_vozvrascheny',
+                vyruchka_uspeh_payTabs.vyruchka_v_statuse_1_payTabs_ni AS 'vyruchka_v_statuse_1_payTabs_ni'
+             FROM 
+                (
+                SELECT
+                    vyruchka_uspeh_payTabs.start_time,
+                    vyruchka_uspeh_payTabs.city_id,
+                    vyruchka_uspeh_payTabs.vyruchka_v_statuse_1_payTabs,
+                    chastichno_vozvrascheny.chastichno_vozvrascheny,
+                    SUM(IFNULL(vyruchka_uspeh_payTabs.vyruchka_v_statuse_1_payTabs,0) + IFNULL(chastichno_vozvrascheny.chastichno_vozvrascheny,0)) OVER (PARTITION BY vyruchka_uspeh_payTabs.city_id ORDER BY vyruchka_uspeh_payTabs.start_time) AS 'vyruchka_v_statuse_1_payTabs_ni'
+                FROM
+                    (SELECT 
+                        DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
+                        t_trade.city_id,
+                        SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'vyruchka_v_statuse_1_payTabs'
+                    FROM t_trade
+                    WHERE t_trade.status=1 
+                        AND t_trade.way=26 
+                        AND t_trade.`type` IN (1,2,6,7) 
+                        AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21' 
+                    GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
+                    ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC, t_trade.city_id DESC) AS vyruchka_uspeh_payTabs
+                LEFT JOIN 
+                (
+                    SELECT
+                        DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
+                        t_trade.city_id,
+                        SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'chastichno_vozvrascheny'
+                    FROM t_trade
+                    WHERE t_trade.status=3
+                        AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
+                    GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
+                    ) AS chastichno_vozvrascheny ON vyruchka_uspeh_payTabs.start_time = chastichno_vozvrascheny.start_time AND vyruchka_uspeh_payTabs.city_id = chastichno_vozvrascheny.city_id
+                    )
+                AS vyruchka_uspeh_payTabs
+        ),
+        vosvraty_payTabs AS ( 
+            SELECT
                 trade.start_time,
                 trade.city_id,
                 trade.vozvraty_payTabs,
@@ -588,40 +566,39 @@ def main():
                 (SELECT
                     DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
                     t_trade.city_id,
-                    SUM(IFNULL(t_trade.account_pay_amount, 0)) AS 'vozvraty_payTabs'
+                    SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'vozvraty_payTabs'
                 FROM t_trade
                 WHERE t_trade.status=4 
                      AND t_trade.way=26 
                      AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
                 GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
-                ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade) AS vozvraty_payTabs
-     ),
-    uspeh_Stripe AS (
-        SELECT
-            trade.start_time,
-            trade.city_id,
-            trade.uspeh_Stripe,
-            SUM(IFNULL(trade.uspeh_Stripe, 0)) OVER (PARTITION BY trade.city_id ORDER BY trade.start_time) AS 'uspeh_Stripe_ni'
-        FROM 
-            (SELECT 
-                DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
-                t_trade.city_id,
-                SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'uspeh_Stripe'
-            FROM t_trade
-            WHERE t_trade.status=1 
-                 AND t_trade.way=6 
-                 AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') > '2024-07-21'
-            GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
-            ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade
-     ),
-     uspeh_Stripe_ni AS(
-         SELECT 
-             uspeh_Stripe.city_id,
-             uspeh_Stripe.start_time,
-            uspeh_Stripe.uspeh_Stripe,
-            uspeh_Stripe.uspeh_Stripe_ni
-         FROM 
-            (SELECT
+                ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade
+         ),
+         vozvraty_payTabs_ni AS (
+             SELECT
+                 vozvraty_payTabs.city_id,
+                 vozvraty_payTabs.start_time,
+                 vozvraty_payTabs.vozvraty_payTabs_ni
+             FROM 
+                (SELECT
+                    trade.start_time,
+                    trade.city_id,
+                    trade.vozvraty_payTabs,
+                    SUM(IFNULL(trade.vozvraty_payTabs,0)) OVER (PARTITION BY trade.city_id ORDER BY trade.start_time) AS 'vozvraty_payTabs_ni'
+                FROM
+                    (SELECT
+                        DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
+                        t_trade.city_id,
+                        SUM(IFNULL(t_trade.account_pay_amount, 0)) AS 'vozvraty_payTabs'
+                    FROM t_trade
+                    WHERE t_trade.status=4 
+                         AND t_trade.way=26 
+                         AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
+                    GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
+                    ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade) AS vozvraty_payTabs
+         ),
+        uspeh_Stripe AS (
+            SELECT
                 trade.start_time,
                 trade.city_id,
                 trade.uspeh_Stripe,
@@ -630,41 +607,42 @@ def main():
                 (SELECT 
                     DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
                     t_trade.city_id,
-                    SUM(t_trade.account_pay_amount) AS 'uspeh_Stripe'
+                    SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'uspeh_Stripe'
                 FROM t_trade
                 WHERE t_trade.status=1 
                      AND t_trade.way=6 
-                     AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
+                     AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') > '2024-07-21'
                 GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
-                ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade) 
-            AS uspeh_Stripe
-     ),
-     vozvraty_Stripe AS (
-     -- Города - ок
-        SELECT
-            trade.start_time,
-            trade.city_id,
-            trade.vozvraty_Stripe,
-            SUM(IFNULL(trade.vozvraty_Stripe, 0)) OVER (PARTITION BY trade.city_id ORDER BY trade.start_time) AS 'vozvraty_Stripe_ni'
-        FROM
-            (SELECT 
-                DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
-                t_trade.city_id,
-                SUM(t_trade.account_pay_amount) AS 'vozvraty_Stripe'
-             FROM t_trade
-             WHERE t_trade.status=4 
-                 AND t_trade.way=6 
-                 AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
-             GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
-             ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade
-     ),
-     vozvraty_Stripe_ni AS (
-         SELECT
-             vozvraty_Stripe.city_id,
-             vozvraty_Stripe.start_time,
-             vozvraty_Stripe.vozvraty_Stripe_ni
-         FROM 
-            (SELECT
+                ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade
+         ),
+         uspeh_Stripe_ni AS(
+             SELECT 
+                 uspeh_Stripe.city_id,
+                 uspeh_Stripe.start_time,
+                uspeh_Stripe.uspeh_Stripe,
+                uspeh_Stripe.uspeh_Stripe_ni
+             FROM 
+                (SELECT
+                    trade.start_time,
+                    trade.city_id,
+                    trade.uspeh_Stripe,
+                    SUM(IFNULL(trade.uspeh_Stripe, 0)) OVER (PARTITION BY trade.city_id ORDER BY trade.start_time) AS 'uspeh_Stripe_ni'
+                FROM 
+                    (SELECT 
+                        DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
+                        t_trade.city_id,
+                        SUM(t_trade.account_pay_amount) AS 'uspeh_Stripe'
+                    FROM t_trade
+                    WHERE t_trade.status=1 
+                         AND t_trade.way=6 
+                         AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
+                    GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
+                    ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade) 
+                AS uspeh_Stripe
+         ),
+         vozvraty_Stripe AS (
+         -- Города
+            SELECT
                 trade.start_time,
                 trade.city_id,
                 trade.vozvraty_Stripe,
@@ -673,225 +651,250 @@ def main():
                 (SELECT 
                     DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
                     t_trade.city_id,
-                    SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'vozvraty_Stripe'
+                    SUM(t_trade.account_pay_amount) AS 'vozvraty_Stripe'
                  FROM t_trade
                  WHERE t_trade.status=4 
                      AND t_trade.way=6 
                      AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
                  GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
-                 ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade)
-            AS vozvraty_Stripe
-     ),
-    user_v_den_register AS (
+                 ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade
+         ),
+         vozvraty_Stripe_ni AS (
+             SELECT
+                 vozvraty_Stripe.city_id,
+                 vozvraty_Stripe.start_time,
+                 vozvraty_Stripe.vozvraty_Stripe_ni
+             FROM 
+                (SELECT
+                    trade.start_time,
+                    trade.city_id,
+                    trade.vozvraty_Stripe,
+                    SUM(IFNULL(trade.vozvraty_Stripe, 0)) OVER (PARTITION BY trade.city_id ORDER BY trade.start_time) AS 'vozvraty_Stripe_ni'
+                FROM
+                    (SELECT 
+                        DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
+                        t_trade.city_id,
+                        SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'vozvraty_Stripe'
+                     FROM t_trade
+                     WHERE t_trade.status=4 
+                         AND t_trade.way=6 
+                         AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
+                     GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
+                     ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade)
+                AS vozvraty_Stripe
+         ),
+        user_v_den_register AS (
+            SELECT
+                res_tab.start_time ,
+                res_tab.city_id ,
+                res_tab.user_v_den_register ,
+                SUM(user_v_den_register) OVER (PARTITION BY res_tab.city_id ORDER BY res_tab.start_time) AS user_v_den_register_ni
+            FROM 
+            (
+                SELECT 
+                    DATE_FORMAT(t_user.register_date, '%Y-%m-%d') AS start_time,
+                    t_user.registration_city_id AS city_id ,
+                    COUNT(t_user.id) AS 'user_v_den_register'
+                FROM t_user
+                WHERE DATE_FORMAT(t_user.register_date, '%Y-%m-%d') >= '2025-11-01'
+                GROUP BY DATE_FORMAT(t_user.register_date, '%Y-%m-%d'), t_user.registration_city_id
+                UNION ALL
+                SELECT 
+                '2025-10-31' AS start_time, 21 AS city_id, 4062 AS user_v_den_register
+                UNION ALL
+                SELECT '2025-10-31', 19, 2153
+                UNION ALL
+                SELECT '2025-10-31', 22, 2142
+                UNION ALL
+                SELECT '2025-10-31', 15, 4535
+                UNION ALL
+                SELECT '2025-10-31', 17, 11471
+                UNION ALL
+                SELECT '2025-10-31', 25, 965
+                UNION ALL
+                SELECT '2025-10-31', 18, 3394
+                UNION ALL
+                SELECT '2025-10-31', 16, 1718
+                UNION ALL
+                SELECT '2025-10-31', 11, 3562
+                UNION ALL
+                SELECT '2025-10-31', 13, 2246
+                UNION ALL
+                SELECT '2025-10-31', 20, 1275
+            ) AS res_tab
+        ),
+        kolichestvo_novyh_s_1_poezdkoy AS 
+            ( 
+            SELECT 
+                DATE(DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')) AS start_date, 
+                register_users.city_id,
+                COUNT(DISTINCT t_bike_use.uid) AS 'kolichestvo_novyh_s_1_poezdkoy',
+                COUNT(t_bike_use.ride_amount) AS 'kolichestvo_poezdok_vsego'
+            FROM t_bike_use
+            LEFT JOIN (
+                SELECT 
+                    DATE(DATE_FORMAT(t_user.register_date, '%Y-%m-%d')) AS register_date, 
+                    t_user.id,
+                    t_user.city_id
+                FROM t_user
+                                ) AS register_users
+            ON t_bike_use.uid=register_users.id
+            WHERE DATE(DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')) = DATE(DATE_FORMAT(register_users.register_date, '%Y-%m-%d'))
+                AND DATE(DATE_FORMAT(register_users.register_date, '%Y-%m-%d')) >= '2024-07-21'
+                AND DATE(DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')) >= '2024-07-21'
+                AND t_bike_use.ride_status != 5
+            GROUP BY DATE(DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')), register_users.city_id   
+        ),
+        dolgi AS (
+            SELECT 
+                dolgi.create_debit_date,
+                dolgi.city_id,
+                dolgi.dolgi,
+                SUM(IFNULL(dolgi.dolgi,0)) OVER (PARTITION BY dolgi.city_id ORDER BY dolgi.create_debit_date) AS 'dolgi_ni'
+            FROM 
+                (SELECT 
+                    DATE_FORMAT(t_payment_details.created, '%Y-%m-%d') AS 'create_debit_date', 
+                    dolgovye_poezdki.city_id,
+                    SUM(IFNULL(t_payment_details.debit_cash,0)) AS 'dolgi'
+                FROM t_payment_details
+                RIGHT JOIN (
+                        SELECT 
+                            t_bike_use.id,
+                            t_bike_use.uid,
+                            t_bike_use.bid,
+                            t_bike.city_id
+                        FROM t_bike_use
+                        LEFT JOIN t_bike ON t_bike_use.bid = t_bike.id
+                        WHERE t_bike_use.ride_status = 2 
+                            AND DATE(DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')) >= '2024-07-21'
+                            ) AS dolgovye_poezdki
+                ON t_payment_details.user_id = dolgovye_poezdki.uid AND t_payment_details.ride_id = dolgovye_poezdki.id
+                WHERE DATE_FORMAT(t_payment_details.created, '%Y-%m-%d') >= '2024-07-21'
+                GROUP BY DATE_FORMAT(t_payment_details.created, '%Y-%m-%d'), dolgovye_poezdki.city_id
+                ORDER BY DATE_FORMAT(t_payment_details.created, '%Y-%m-%d') DESC
+                ) AS dolgi
+        ),
+        t_city_with_noname AS (
+            SELECT
+                calendar.gen_date AS 'start_day',
+                t_city_with_noname.id,
+                t_city_with_noname.name
+            FROM (
+            select * from 
+                (select adddate('1970-01-01',t4*10000 + t3*1000 + t2*100 + t1*10 + t0) gen_date from
+                 (select 0 t0 union select 1 union select 2 union select 3 union select 4 union select 5 union select 6 union select 7 union select 8 union select 9) t0,
+                 (select 0 t1 union select 1 union select 2 union select 3 union select 4 union select 5 union select 6 union select 7 union select 8 union select 9) t1,
+                 (select 0 t2 union select 1 union select 2 union select 3 union select 4 union select 5 union select 6 union select 7 union select 8 union select 9) t2,
+                 (select 0 t3 union select 1 union select 2 union select 3 union select 4 union select 5 union select 6 union select 7 union select 8 union select 9) t3,
+                 (select 0 t4 union select 1 union select 2 union select 3 union select 4 union select 5 union select 6 union select 7 union select 8 union select 9) t4) v
+                where gen_date between '2024-07-21' and DATE_FORMAT(NOW(), '%Y-%m-%d')
+            ) AS calendar
+            CROSS JOIN (
+                SELECT 
+                    t_city.*
+                FROM t_city
+                UNION
+                SELECT 
+                    0 AS 'id', 
+                    'Unknown' AS 'name', 
+                    '' AS 'note', 
+                    NULL AS 'code', 
+                    '' AS 'area_detail', 
+                    0 AS 'area_lat', 
+                    0 AS 'area_lng', 
+                    NULL AS 'currency', 
+                    '00:00' AS 'start_time', 
+                    '00:24' AS 'end_time', 
+                    NULL AS 'invite_code', 
+                    '{"max_speed_limit":0}' AS 'extend_info', 
+                    1 AS 'industry_id'
+            ) AS t_city_with_noname
+        )
         SELECT
-            res_tab.start_time ,
-            res_tab.city_id ,
-            res_tab.user_v_den_register ,
-            SUM(user_v_den_register) OVER (PARTITION BY res_tab.city_id ORDER BY res_tab.start_time) AS user_v_den_register_ni
-        FROM 
-        (
+            NOW() AS 'timestamp' ,
+            res.id ,
+            res.name ,
+            res.poezdok ,
+            IFNULL(res.poezdok_v_srednem_na_samokat,0) AS poezdok_v_srednem_na_samokat,
+            IFNULL(res.vyruchka_sim,0) AS vyruchka_sim,
+            IFNULL(res.srednyaa_cena_poezdki,0) AS srednyaa_cena_poezdki,
+            res.oplacheno_bonusami ,
+            res.vyruchka,
+            res.vyruchka_bez_bonusov,
+            res.skidka,
+            res.vyruchka_s_abonementov,
+            res.vyruchka_bez_bonusov_vyruchka_s_abonementov,
+            res.vni,
+            res.vni_bez_bonusov,
+            res.kvt,
+            res.user_v_den_register,
+            res.user_v_den_obshc,
+            res.obcshee_vrmeya_min,
+            IFNULL(res.srednyee_vremya_poezdki,0) AS srednyee_vremya_poezdki,
+            res.iz_nih_usero_sovershivshih_poezdki_vsego,
+            res.kol_vo_poezdok_vsego,
+            res.proniknovenie,
+            res.poezdok_novyi_user
+        FROM
+            (
             SELECT 
-                DATE_FORMAT(t_user.register_date, '%Y-%m-%d') AS start_time,
-                t_user.registration_city_id AS city_id ,
-                COUNT(t_user.id) AS 'user_v_den_register'
-            FROM t_user
-            WHERE DATE_FORMAT(t_user.register_date, '%Y-%m-%d') >= '2025-11-01'
-            GROUP BY DATE_FORMAT(t_user.register_date, '%Y-%m-%d'), t_user.registration_city_id
-            UNION ALL
-            SELECT 
-            '2025-10-31' AS start_time, 21 AS city_id, 4062 AS user_v_den_register
-            UNION ALL
-            SELECT '2025-10-31', 19, 2153
-            UNION ALL
-            SELECT '2025-10-31', 22, 2142
-            UNION ALL
-            SELECT '2025-10-31', 15, 4535
-            UNION ALL
-            SELECT '2025-10-31', 17, 11471
-            UNION ALL
-            SELECT '2025-10-31', 25, 965
-            UNION ALL
-            SELECT '2025-10-31', 18, 3394
-            UNION ALL
-            SELECT '2025-10-31', 16, 1718
-            UNION ALL
-            SELECT '2025-10-31', 11, 3562
-            UNION ALL
-            SELECT '2025-10-31', 13, 2246
-            UNION ALL
-            SELECT '2025-10-31', 20, 1275
-        ) AS res_tab
-    ),
-    kolichestvo_novyh_s_1_poezdkoy AS 
-        ( 
-        SELECT 
-            DATE(DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')) AS start_date, 
-            register_users.city_id,
-            COUNT(DISTINCT t_bike_use.uid) AS 'kolichestvo_novyh_s_1_poezdkoy',
-            COUNT(t_bike_use.ride_amount) AS 'kolichestvo_poezdok_vsego'
-        FROM t_bike_use
-        LEFT JOIN (
-            SELECT 
-                DATE(DATE_FORMAT(t_user.register_date, '%Y-%m-%d')) AS register_date, 
-                t_user.id,
-                t_user.city_id
-            FROM t_user
-                            ) AS register_users
-        ON t_bike_use.uid=register_users.id
-        WHERE DATE(DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')) = DATE(DATE_FORMAT(register_users.register_date, '%Y-%m-%d'))
-            AND DATE(DATE_FORMAT(register_users.register_date, '%Y-%m-%d')) >= '2024-07-21'
-            AND DATE(DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')) >= '2024-07-21'
-            AND t_bike_use.ride_status != 5
-        GROUP BY DATE(DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')), register_users.city_id   
-    ),
-    dolgi AS (
-        SELECT 
-            dolgi.create_debit_date,
-            dolgi.city_id,
-            dolgi.dolgi,
-            SUM(IFNULL(dolgi.dolgi,0)) OVER (PARTITION BY dolgi.city_id ORDER BY dolgi.create_debit_date) AS 'dolgi_ni'
-        FROM 
-            (SELECT 
-                DATE_FORMAT(t_payment_details.created, '%Y-%m-%d') AS 'create_debit_date', 
-                dolgovye_poezdki.city_id,
-                SUM(IFNULL(t_payment_details.debit_cash,0)) AS 'dolgi'
-            FROM t_payment_details
-            RIGHT JOIN (
-                    SELECT 
-                        t_bike_use.id,
-                        t_bike_use.uid,
-                        t_bike_use.bid,
-                        t_bike.city_id
-                    FROM t_bike_use
-                    LEFT JOIN t_bike ON t_bike_use.bid = t_bike.id
-                    WHERE t_bike_use.ride_status = 2 
-                        AND DATE(DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')) >= '2024-07-21'
-                        ) AS dolgovye_poezdki
-            ON t_payment_details.user_id = dolgovye_poezdki.uid AND t_payment_details.ride_id = dolgovye_poezdki.id
-            WHERE DATE_FORMAT(t_payment_details.created, '%Y-%m-%d') >= '2024-07-21'
-            GROUP BY DATE_FORMAT(t_payment_details.created, '%Y-%m-%d'), dolgovye_poezdki.city_id
-            ORDER BY DATE_FORMAT(t_payment_details.created, '%Y-%m-%d') DESC
-            ) AS dolgi
-    ),
-    t_city_with_noname AS (
-        SELECT
-            calendar.gen_date AS 'start_day',
-            t_city_with_noname.id,
-            t_city_with_noname.name
-        FROM (
-        select * from 
-            (select adddate('1970-01-01',t4*10000 + t3*1000 + t2*100 + t1*10 + t0) gen_date from
-             (select 0 t0 union select 1 union select 2 union select 3 union select 4 union select 5 union select 6 union select 7 union select 8 union select 9) t0,
-             (select 0 t1 union select 1 union select 2 union select 3 union select 4 union select 5 union select 6 union select 7 union select 8 union select 9) t1,
-             (select 0 t2 union select 1 union select 2 union select 3 union select 4 union select 5 union select 6 union select 7 union select 8 union select 9) t2,
-             (select 0 t3 union select 1 union select 2 union select 3 union select 4 union select 5 union select 6 union select 7 union select 8 union select 9) t3,
-             (select 0 t4 union select 1 union select 2 union select 3 union select 4 union select 5 union select 6 union select 7 union select 8 union select 9) t4) v
-            where gen_date between '2024-07-21' and DATE_FORMAT(NOW(), '%Y-%m-%d')
-        ) AS calendar
-        CROSS JOIN (
-            SELECT 
-                t_city.*
-            FROM t_city
-            UNION
-            SELECT 
-                0 AS 'id', 
-                'Unknown' AS 'name', 
-                '' AS 'note', 
-                NULL AS 'code', 
-                '' AS 'area_detail', 
-                0 AS 'area_lat', 
-                0 AS 'area_lng', 
-                NULL AS 'currency', 
-                '00:00' AS 'start_time', 
-                '00:24' AS 'end_time', 
-                NULL AS 'invite_code', 
-                '{"max_speed_limit":0}' AS 'extend_info', 
-                1 AS 'industry_id'
-        ) AS t_city_with_noname
-    )
-    SELECT
-        NOW() AS 'timestamp' ,
-        res.id ,
-        res.name ,
-        res.poezdok ,
-        IFNULL(res.poezdok_v_srednem_na_samokat,0) AS poezdok_v_srednem_na_samokat,
-        IFNULL(res.vyruchka_sim,0) AS vyruchka_sim,
-        IFNULL(res.srednyaa_cena_poezdki,0) AS srednyaa_cena_poezdki,
-        res.oplacheno_bonusami ,
-        res.vyruchka,
-        res.vyruchka_bez_bonusov,
-        res.skidka,
-        res.vyruchka_s_abonementov,
-        res.vyruchka_bez_bonusov_vyruchka_s_abonementov,
-        res.vni,
-        res.vni_bez_bonusov,
-        res.kvt,
-        res.user_v_den_register,
-        res.user_v_den_obshc,
-        res.obcshee_vrmeya_min,
-        IFNULL(res.srednyee_vremya_poezdki,0) AS srednyee_vremya_poezdki,
-        res.iz_nih_usero_sovershivshih_poezdki_vsego,
-        res.kol_vo_poezdok_vsego,
-        res.proniknovenie,
-        res.poezdok_novyi_user
-    FROM
-        (
-        SELECT 
-            NOW() AS 'timestamp',
-            t_city_with_noname.start_day ,
-            t_city_with_noname.id,
-            t_city_with_noname.name,
-            IFNULL(three_left_cols.poezdok, 0)  AS 'poezdok',
-            IFNULL(three_left_cols.poezdok, 0) / IFNULL(kvt.kvt, 0) AS 'poezdok_v_srednem_na_samokat',
-            IFNULL((IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0) - IFNULL(three_left_cols.oplacheno_bonusami,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0)),0) / IFNULL(kvt.kvt,0) AS 'vyruchka_sim',
-            (IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) - IFNULL(three_left_cols.oplacheno_bonusami,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0)) / IFNULL(three_left_cols.poezdok,0) AS 'srednyaa_cena_poezdki',
-            IFNULL(three_left_cols.oplacheno_bonusami,0) AS 'oplacheno_bonusami',
-            IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) AS 'vyruchka',
-            IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) - IFNULL(three_left_cols.oplacheno_bonusami,0) AS 'vyruchka_bez_bonusov',
-            IFNULL(three_left_cols.skidka,0) AS 'skidka',
-            IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) AS 'vyruchka_s_abonementov',
-            IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) - IFNULL(three_left_cols.oplacheno_bonusami,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(three_left_cols.skidka,0) AS 'vyruchka_bez_bonusov_vyruchka_s_abonementov',
-            IFNULL(three_left_cols.obzchaya_stoimost_ni,0) - IFNULL(dolgi.dolgi_ni,0) - IFNULL(sum_uspeh_abon.vyruchka_s_abonementov_ni,0) + IFNULL(sum_mnogor_abon.sum_mnogor_abon_ni,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov_ni,0) AS 'vni',
-            IFNULL(three_left_cols.obzchaya_stoimost_ni,0) - IFNULL(dolgi.dolgi_ni,0) - IFNULL(sum_uspeh_abon.vyruchka_s_abonementov_ni,0) + IFNULL(sum_mnogor_abon.sum_mnogor_abon_ni,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov_ni,0) - IFNULL(three_left_cols.oplacheno_bonusami_ni,0) - IFNULL(three_left_cols.skidka_ni,0) AS 'vni_bez_bonusov',
-            IFNULL(kvt.kvt, 0) AS 'kvt',
-            IFNULL(user_v_den_register.user_v_den_register, 0) AS 'user_v_den_register',
-            SUM(IFNULL(user_v_den_register.user_v_den_register, 0)) OVER (PARTITION BY  t_city_with_noname.id) AS 'user_v_den_obshc',
-            -- IFNULL(user_v_den_register.user_v_den_register_ni, 0) AS 'user_v_den_obshc',
-            IFNULL(three_left_cols.obschee_vremya_min, 0) AS 'obcshee_vrmeya_min',
-            IFNULL(three_left_cols.obschee_vremya_min, 0) / IFNULL(three_left_cols.poezdok, 0) AS 'srednyee_vremya_poezdki',
-            IFNULL(kolichestvo_novyh_s_1_poezdkoy.kolichestvo_novyh_s_1_poezdkoy, 0) AS 'iz_nih_usero_sovershivshih_poezdki_vsego',
-            IFNULL(kolichestvo_novyh_s_1_poezdkoy.kolichestvo_poezdok_vsego, 0) AS 'kol_vo_poezdok_vsego',
-            IFNULL(ROUND((kolichestvo_novyh_s_1_poezdkoy.kolichestvo_novyh_s_1_poezdkoy / user_v_den_register.user_v_den_register) * 100, 2), 0) AS 'proniknovenie',
-            IFNULL(ROUND(kolichestvo_novyh_s_1_poezdkoy.kolichestvo_poezdok_vsego / kolichestvo_novyh_s_1_poezdkoy.kolichestvo_novyh_s_1_poezdkoy, 2), 0) AS 'poezdok_novyi_user'
-        FROM t_city_with_noname
-        LEFT JOIN kvt ON t_city_with_noname.start_day = kvt.start_time AND t_city_with_noname.id = kvt.city_id
-        LEFT JOIN sum_uspeh_abon ON t_city_with_noname.start_day = sum_uspeh_abon.start_time AND t_city_with_noname.id = sum_uspeh_abon.city_id
-        LEFT JOIN sum_mnogor_abon ON t_city_with_noname.start_day = sum_mnogor_abon.start_time AND t_city_with_noname.id = sum_mnogor_abon.city_id
-        LEFT JOIN vyruchka_uspeh_payTabs ON t_city_with_noname.start_day = vyruchka_uspeh_payTabs.start_time AND t_city_with_noname.id = vyruchka_uspeh_payTabs.city_id
-        LEFT JOIN vyruchka_uspeh_payTabs_ni ON t_city_with_noname.start_day = vyruchka_uspeh_payTabs_ni.start_time AND t_city_with_noname.id = vyruchka_uspeh_payTabs_ni.city_id
-        LEFT JOIN vosvraty_payTabs ON t_city_with_noname.start_day = vosvraty_payTabs.start_time AND t_city_with_noname.id = vosvraty_payTabs.city_id
-        LEFT JOIN vozvraty_payTabs_ni ON t_city_with_noname.start_day = vozvraty_payTabs_ni.start_time AND t_city_with_noname.id = vozvraty_payTabs_ni.city_id
-        LEFT JOIN uspeh_Stripe ON t_city_with_noname.start_day = uspeh_Stripe.start_time AND t_city_with_noname.id = uspeh_Stripe.city_id
-        LEFT JOIN uspeh_Stripe_ni ON t_city_with_noname.start_day = uspeh_Stripe_ni.start_time AND t_city_with_noname.id = uspeh_Stripe_ni.city_id
-        LEFT JOIN vozvraty_Stripe ON t_city_with_noname.start_day = vozvraty_Stripe.start_time AND t_city_with_noname.id = vozvraty_Stripe.city_id
-        LEFT JOIN vozvraty_Stripe_ni ON t_city_with_noname.start_day = vozvraty_Stripe_ni.start_time AND t_city_with_noname.id = vozvraty_Stripe_ni.city_id
-        LEFT JOIN user_v_den_register ON t_city_with_noname.start_day = user_v_den_register.start_time AND t_city_with_noname.id = user_v_den_register.city_id 
-        LEFT JOIN kolichestvo_novyh_s_1_poezdkoy ON t_city_with_noname.start_day = kolichestvo_novyh_s_1_poezdkoy.start_date AND t_city_with_noname.id = kolichestvo_novyh_s_1_poezdkoy.city_id
-        LEFT JOIN dolgi ON t_city_with_noname.start_day = dolgi.create_debit_date AND t_city_with_noname.id = dolgi.city_id
-        LEFT JOIN three_left_cols ON t_city_with_noname.start_day = three_left_cols.start_time AND t_city_with_noname.id = three_left_cols.city_id
-        -- WHERE 
-            -- IFNULL(three_left_cols.poezdok, 0) > 0
-            -- AND 
-        --	t_city_with_noname.start_day = DATE_FORMAT(NOW(), '%Y-%m-%d')
-        -- ORDER BY t_city_with_noname.start_day DESC
-        ) AS res
-    WHERE res.start_day = DATE_FORMAT(NOW(), '%Y-%m-%d')
-    '''
+                NOW() AS 'timestamp',
+                t_city_with_noname.start_day ,
+                t_city_with_noname.id,
+                t_city_with_noname.name,
+                IFNULL(three_left_cols.poezdok, 0)  AS 'poezdok',
+                IFNULL(three_left_cols.poezdok, 0) / IFNULL(kvt.kvt, 0) AS 'poezdok_v_srednem_na_samokat',
+                IFNULL((IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0) - IFNULL(three_left_cols.oplacheno_bonusami,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0)),0) / IFNULL(kvt.kvt,0) AS 'vyruchka_sim',
+                (IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) - IFNULL(three_left_cols.oplacheno_bonusami,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0)) / IFNULL(three_left_cols.poezdok,0) AS 'srednyaa_cena_poezdki',
+                IFNULL(three_left_cols.oplacheno_bonusami,0) AS 'oplacheno_bonusami',
+                IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) AS 'vyruchka',
+                IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) - IFNULL(three_left_cols.oplacheno_bonusami,0) AS 'vyruchka_bez_bonusov',
+                IFNULL(three_left_cols.skidka,0) AS 'skidka',
+                IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) AS 'vyruchka_s_abonementov',
+                IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) - IFNULL(three_left_cols.oplacheno_bonusami,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(three_left_cols.skidka,0) AS 'vyruchka_bez_bonusov_vyruchka_s_abonementov',
+                IFNULL(three_left_cols.obzchaya_stoimost_ni,0) - IFNULL(dolgi.dolgi_ni,0) - IFNULL(sum_uspeh_abon.vyruchka_s_abonementov_ni,0) + IFNULL(sum_mnogor_abon.sum_mnogor_abon_ni,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov_ni,0) AS 'vni',
+                IFNULL(three_left_cols.obzchaya_stoimost_ni,0) - IFNULL(dolgi.dolgi_ni,0) - IFNULL(sum_uspeh_abon.vyruchka_s_abonementov_ni,0) + IFNULL(sum_mnogor_abon.sum_mnogor_abon_ni,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov_ni,0) - IFNULL(three_left_cols.oplacheno_bonusami_ni,0) - IFNULL(three_left_cols.skidka_ni,0) AS 'vni_bez_bonusov',
+                IFNULL(kvt.kvt, 0) AS 'kvt',
+                IFNULL(user_v_den_register.user_v_den_register, 0) AS 'user_v_den_register',
+                SUM(IFNULL(user_v_den_register.user_v_den_register, 0)) OVER (PARTITION BY  t_city_with_noname.id) AS 'user_v_den_obshc',
+                IFNULL(three_left_cols.obschee_vremya_min, 0) AS 'obcshee_vrmeya_min',
+                IFNULL(three_left_cols.obschee_vremya_min, 0) / IFNULL(three_left_cols.poezdok, 0) AS 'srednyee_vremya_poezdki',
+                IFNULL(kolichestvo_novyh_s_1_poezdkoy.kolichestvo_novyh_s_1_poezdkoy, 0) AS 'iz_nih_usero_sovershivshih_poezdki_vsego',
+                IFNULL(kolichestvo_novyh_s_1_poezdkoy.kolichestvo_poezdok_vsego, 0) AS 'kol_vo_poezdok_vsego',
+                IFNULL(ROUND((kolichestvo_novyh_s_1_poezdkoy.kolichestvo_novyh_s_1_poezdkoy / user_v_den_register.user_v_den_register) * 100, 2), 0) AS 'proniknovenie',
+                IFNULL(ROUND(kolichestvo_novyh_s_1_poezdkoy.kolichestvo_poezdok_vsego / kolichestvo_novyh_s_1_poezdkoy.kolichestvo_novyh_s_1_poezdkoy, 2), 0) AS 'poezdok_novyi_user'
+            FROM t_city_with_noname
+            LEFT JOIN kvt ON t_city_with_noname.start_day = kvt.start_time AND t_city_with_noname.id = kvt.city_id
+            LEFT JOIN sum_uspeh_abon ON t_city_with_noname.start_day = sum_uspeh_abon.start_time AND t_city_with_noname.id = sum_uspeh_abon.city_id
+            LEFT JOIN sum_mnogor_abon ON t_city_with_noname.start_day = sum_mnogor_abon.start_time AND t_city_with_noname.id = sum_mnogor_abon.city_id
+            LEFT JOIN vyruchka_uspeh_payTabs ON t_city_with_noname.start_day = vyruchka_uspeh_payTabs.start_time AND t_city_with_noname.id = vyruchka_uspeh_payTabs.city_id
+            LEFT JOIN vyruchka_uspeh_payTabs_ni ON t_city_with_noname.start_day = vyruchka_uspeh_payTabs_ni.start_time AND t_city_with_noname.id = vyruchka_uspeh_payTabs_ni.city_id
+            LEFT JOIN vosvraty_payTabs ON t_city_with_noname.start_day = vosvraty_payTabs.start_time AND t_city_with_noname.id = vosvraty_payTabs.city_id
+            LEFT JOIN vozvraty_payTabs_ni ON t_city_with_noname.start_day = vozvraty_payTabs_ni.start_time AND t_city_with_noname.id = vozvraty_payTabs_ni.city_id
+            LEFT JOIN uspeh_Stripe ON t_city_with_noname.start_day = uspeh_Stripe.start_time AND t_city_with_noname.id = uspeh_Stripe.city_id
+            LEFT JOIN uspeh_Stripe_ni ON t_city_with_noname.start_day = uspeh_Stripe_ni.start_time AND t_city_with_noname.id = uspeh_Stripe_ni.city_id
+            LEFT JOIN vozvraty_Stripe ON t_city_with_noname.start_day = vozvraty_Stripe.start_time AND t_city_with_noname.id = vozvraty_Stripe.city_id
+            LEFT JOIN vozvraty_Stripe_ni ON t_city_with_noname.start_day = vozvraty_Stripe_ni.start_time AND t_city_with_noname.id = vozvraty_Stripe_ni.city_id
+            LEFT JOIN user_v_den_register ON t_city_with_noname.start_day = user_v_den_register.start_time AND t_city_with_noname.id = user_v_den_register.city_id 
+            LEFT JOIN kolichestvo_novyh_s_1_poezdkoy ON t_city_with_noname.start_day = kolichestvo_novyh_s_1_poezdkoy.start_date AND t_city_with_noname.id = kolichestvo_novyh_s_1_poezdkoy.city_id
+            LEFT JOIN dolgi ON t_city_with_noname.start_day = dolgi.create_debit_date AND t_city_with_noname.id = dolgi.city_id
+            LEFT JOIN three_left_cols ON t_city_with_noname.start_day = three_left_cols.start_time AND t_city_with_noname.id = three_left_cols.city_id
+            -- WHERE 
+                -- IFNULL(three_left_cols.poezdok, 0) > 0
+                -- AND 
+            --	t_city_with_noname.start_day = DATE_FORMAT(NOW(), '%Y-%m-%d')
+            -- ORDER BY t_city_with_noname.start_day DESC
+            ) AS res
+        WHERE res.start_day = DATE_FORMAT(NOW(), '%Y-%m-%d')
+        '''
 
-    df_cities = pd.read_sql(select_vni_cities, engine_mysql)
-    df_cities.to_sql("vni_cities", engine_postgresql, if_exists="append", index=False)
+        df_cities = pd.read_sql(select_vni_cities, engine_mysql)
+        df_cities.to_sql("vni_cities", engine_postgresql, if_exists="append", index=False)
+        print('Got it: VNI_cities')
 
-    print('Got it: VNI_cities')
+    except Exception as e:
+        print(f"Произошла ошибка в VNI_cities: {e}")
+        pass
 
     google_service_account_json = get_google_creds()
     with open('google_json.json', 'w') as fp:
@@ -900,7 +903,6 @@ def main():
 
     try:
         # # АКБ - начало
-
         select_df1_all = '''
             -- Собираю из БД MYSQL два склада и их модели
             WITH t_city_sklady AS (
@@ -1326,7 +1328,6 @@ def main():
         df.to_sql("akb_cities_and_stocks", engine_postgresql, if_exists="append", index=False)
         print('akb_cities_and_stocks UPDATED!')
 
-
         # # # АКБ - конец
     except Exception as e:
         print(f"Произошла ошибка в АКБ: {e}")
@@ -1343,9 +1344,7 @@ def main():
                     -- raw."timestamp" ,
                     raw.slomali ,
                     raw.pochinili ,
-                    -- raw.pribylo_vybylo_goroda + raw.slomali  - LAG(raw.slomali) OVER (PARTITION BY raw.city_id, raw."name" ORDER BY raw.day_) AS pribylo_vybylo_goroda,
                     raw.pribylo_vybylo_goroda,
-                    -- COALESCE(raw.pribylo_vybylo_sklady,0) + COALESCE(raw.pochinili,0) - COALESCE(LAG(raw.pochinili) OVER (PARTITION BY raw.city_id, raw."name" ORDER BY raw.day_),0) AS pribylo_vybylo_sklady,
                     raw.pribylo_vybylo_sklady,
                     raw.remont_posledniy_pred ,
                     raw.vyveden_iz_ekspluatacii_posledniy_pred ,
@@ -1641,27 +1640,29 @@ def main():
     SPREADSHEET_ID = '1dSOV9X2FV3mnOmnwWvTMJuCCZ-tVBf64DP90k3EYD90'
     RANGE_NAME = 'Цели по чекапам!A:E'
     service_account_file = generated_json_file
+    try:
+        df = read_sheet_data_to_pandas(sheets_service, SPREADSHEET_ID, RANGE_NAME)
+        df = df[df['Worker Id'].notna()]
+        df.fillna(0, inplace=True)
+        df['Worker Id'] = df['Worker Id'].astype(int)
+        df['Цель на смену'] = df['Цель на смену'].astype(int)
+        df['add_time'] = pd.Timestamp.now() + pd.Timedelta(hours=3)
 
-    df = read_sheet_data_to_pandas(sheets_service, SPREADSHEET_ID, RANGE_NAME)
+        # Очистка таблицы
+        truncate_t_bike = "TRUNCATE TABLE checkup_goals_from_google RESTART IDENTITY;"
+        with engine_postgresql.connect() as connection:
+            with connection.begin() as transaction:
+                print(f"Попытка очистить таблицу")
+                # Очистка grafik_rabot_google
+                connection.execute(sa.text(truncate_t_bike))
+                # Если ошибок нет, транзакция фиксируется автоматически
+                print(f"Таблица checkup_goals_from_google успешно очищена!")
 
-    df = df[df['Worker Id'].notna()]
-    df.fillna(0, inplace=True)
-    df['Worker Id'] = df['Worker Id'].astype(int)
-    df['Цель на смену'] = df['Цель на смену'].astype(int)
-    df['add_time'] = pd.Timestamp.now() + pd.Timedelta(hours=3)
-
-    # Очистка таблицы
-    truncate_t_bike = "TRUNCATE TABLE checkup_goals_from_google RESTART IDENTITY;"
-    with engine_postgresql.connect() as connection:
-        with connection.begin() as transaction:
-            print(f"Попытка очистить таблицу")
-            # Очистка grafik_rabot_google
-            connection.execute(sa.text(truncate_t_bike))
-            # Если ошибок нет, транзакция фиксируется автоматически
-            print(f"Таблица checkup_goals_from_google успешно очищена!")
-
-    df.to_sql("checkup_goals_from_google", engine_postgresql, if_exists="append", index=False)
-    print('Таблица checkup_goals_from_google успешно обновлена!')
+        df.to_sql("checkup_goals_from_google", engine_postgresql, if_exists="append", index=False)
+        print('Таблица checkup_goals_from_google успешно обновлена!')
+    except Exception as e:
+        print(f"Произошла ошибка в Цели по чекапам: {e}")
+        pass
 
     # Цели по чекапам. Конец
 
@@ -1807,9 +1808,7 @@ def main():
     for index, row in df_temp.iterrows():
 
         if (row['Ставка за час постоянно'] == 0) & (row['Тип ставки'] == 'Ставка за час'):
-
             #         print('Постоянно')
-
             dates1 = pd.date_range(start=row['Месяц'], end=row['Конец месяца'], freq='D')
             df1 = pd.DataFrame(dates1, columns=['Date'])
             df1['Ставка за час'] = row['Ставка за час']
@@ -1875,8 +1874,6 @@ def main():
             ds."Date",
             ds."Worker id",
             ds."Nickname" AS "Worker nickname",
-            -- COALESCE(SUM(ds."Minutes"), 0) AS Minutes,
-            -- COALESCE(SUM(ds."Actual duration (hours)"), 0) AS "Actual duration (hours)",
             CASE 
                 WHEN COALESCE( SUM(ds."Minutes") / NULLIF(SUM(ds."Actual duration (hours)" ), 0) / 60, 0) < 0.36 THEN 5
                 ELSE 6
@@ -1884,7 +1881,6 @@ def main():
         FROM public.daily_shifts ds
         WHERE ds."Date" >= '2025-08-01' AND ds."Worker id" = 35
         GROUP BY ds."Date", ds."Worker id", ds."Nickname"
-        -- ORDER BY ds."Date" DESC
     '''
 
     df_c = pd.read_sql(select_min_efficiency, engine_postgresql)
@@ -1897,12 +1893,10 @@ def main():
     for index, row in df_temp[df_temp['Worker id'] == 35].iterrows():
 
         if (row['Ставка за час постоянно'] == 0) & (row['Тип ставки'] == 'Ставка за час'):
-
             #         print('Постоянно')
 
             dates1 = pd.date_range(start=row['Месяц'], end=row['Конец месяца'], freq='D')
             df1 = pd.DataFrame(dates1, columns=['Date'])
-            #         df1['Ставка за час'] = row['Ставка за час']
             df1['Worker id'] = row['Worker id']
             df1['Worker username'] = row['Worker username']
             df1['Worker nickname'] = row['Worker nickname']
@@ -1916,7 +1910,6 @@ def main():
             dates1 = pd.date_range(start=row['Месяц'],
                                    end=row['Дата нового условия ставки (час)'] - pd.Timedelta(hours=1), freq='D')
             df1 = pd.DataFrame(dates1, columns=['Date'])
-            #         df1['Ставка за час'] = row['Ставка за час']
             df1['Worker id'] = row['Worker id']
             df1['Worker username'] = row['Worker username']
             df1['Worker nickname'] = row['Worker nickname']
@@ -1927,7 +1920,6 @@ def main():
             # Диапазон после изменения ставки
             dates2 = pd.date_range(start=row['Дата нового условия ставки (час)'], end=row['Конец месяца'], freq='D')
             df2 = pd.DataFrame(dates2, columns=['Date'])
-            #         df2['Ставка за час'] = row['Ставка измененная за час']
             df2['Worker id'] = row['Worker id']
             df2['Worker username'] = row['Worker username']
             df2['Worker nickname'] = row['Worker nickname']
@@ -1939,7 +1931,6 @@ def main():
     res_c['Месяц'] = res_c['Date'].apply(lambda x: x.strftime('%Y-%m-01'))
     res_c['Месяц'] = pd.to_datetime(res_c['Месяц'], errors='coerce')
     res_c['Date'] = pd.to_datetime(res_c['Date'], errors='coerce')
-    # res['Ставка за час'] = res['Ставка за час'].astype(float)
     res_c['Worker id'] = res_c['Worker id'].astype(int)
     res_c['Посменная зп'] = 0
 
@@ -2431,10 +2422,6 @@ def main():
         x=df_fresh_t_subscription_mapping_mysql.shape[0]))
     #   Обновление таблицы t_subscription_mapping в Postgres. Конец
 
-
-
-
-
     #   Обновление таблицы t_ride_event_log в Postgres. Начало
     # Максимальный id записи в принимающей таблице
     select_max_id_t_ride_event_log = '''
@@ -2517,8 +2504,6 @@ def main():
                                                              index=False)
     print('Added {x} records to t_payment_details in Postgres!'.format(x=df_fresh_t_payment_details_mysql.shape[0]))
     #   Обновление таблицы t_payment_details в Postgres. Конец
-
-
 
     # История чекапов. Начало
     select_checkups_history = r'''
@@ -2669,7 +2654,6 @@ def main():
                         DATE(t."Created") = current_date
                         AND 
                         t."Status" IN ('in progress', 'unassigned')
-                        --t."Status" IN ('resolved')
                         ) AS temp_tab
                 GROUP BY temp_tab."City"
             ) AS planned_tab ON target_tab."City" = planned_tab."City" 
@@ -2692,7 +2676,6 @@ def main():
                         AND 
                         DATE(t."Created") = current_date
                         AND 
-                        --t."Status" IN ('in progress', 'unassigned')
                         t."Status" IN ('resolved')
                         ) AS temp_tab
                 GROUP BY temp_tab."City"
@@ -2929,12 +2912,7 @@ def main():
     WITH t_res AS 
     (
         SELECT 
-            --now() AS add_time ,
             tbu.id ,
-            --tbu.uid ,
-            --tbu.bid ,
-            --tbu.start_time ,
-            --tbu.end_time ,
             tbu.start_lat ,
             tbu.start_lng ,
             tbu.end_lat ,
@@ -2942,7 +2920,6 @@ def main():
             ta.lat AS  area_lat,
             ta.lng AS area_lng ,
             ta.city_id ,
-            --tc.id AS city_id ,
             ta.name AS area,
             ta.id AS area_id ,
                 6371000 * acos(
@@ -3078,12 +3055,7 @@ def main():
         WITH t_res AS 
         (
             SELECT 
-                --now() AS add_time ,
                 tbu.id ,
-                --tbu.uid ,
-                --tbu.bid ,
-                --tbu.start_time ,
-                --tbu.end_time ,
                 tbu.start_lat ,
                 tbu.start_lng ,
                 tbu.end_lat ,
@@ -3091,7 +3063,6 @@ def main():
                 ta.lat AS  area_lat,
                 ta.lng AS area_lng ,
                 ta.city_id ,
-                --tc.id AS city_id ,
                 ta.name AS area,
                 ta.id AS area_id ,
                     6371000 * acos(
@@ -3133,8 +3104,6 @@ def main():
             COALESCE(t_starts_res.city_id, t_ends_res.city_id) AS city_id ,
             tap.area_id ,
             tap.area_name ,
-            --p.parking_id AS area_id ,
-            --p.area AS area_name ,
             COALESCE(t_starts_res.area , t_ends_res.area) AS parking_name ,
             COALESCE(t_starts_res.area_id , t_ends_res.area_id) AS parking_id ,
             COALESCE(t_ends_res.count_end_under_15m, 0) AS count_end_under_15m ,
@@ -3276,7 +3245,6 @@ def main():
                 vc.name ,
                 vc.kvt ,
                 vc.poezdok ,
-                --FLOAT(vc.srednyee_vremya_poezdki,2) ,
                 vc.srednyee_vremya_poezdki ,
                 vc.vyruchka AS vyruchka,
                 vc.vyruchka_bez_bonusov AS vyruchka_bez_bonusov,
@@ -3599,18 +3567,6 @@ def main():
     df_new_orders_revenue = pd.read_sql(select_new_orders_revenue, engine_mysql)
     df_new_orders_revenue.to_sql("t_orders_revenue", engine_postgresql, if_exists="append", index=False)
 
-    # Удаление в parking_revenue_stats за последние 2 часа
-    # truncate_parking_revenue_stats = '''
-    #     DELETE FROM t_parking_revenue_stats
-    #     WHERE t_parking_revenue_stats."timestamp" >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-    # '''
-    #
-    # with engine_postgresql.connect() as connection:
-    #     with connection.begin() as transaction:
-    #         connection.execute(sa.text(truncate_parking_revenue_stats))
-    #         transaction.commit()
-    #         print(f"Таблица t_parking_revenue_stats успешно очищена!")
-
     truncate_parking_revenue_stats1 = '''
         DELETE FROM t_parking_revenue_stats1 
         WHERE t_parking_revenue_stats1."timestamp" >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
@@ -3628,218 +3584,6 @@ def main():
             transaction.commit()
             print(f"Таблица t_parking_revenue_stats1 успешно очищена!")
             print(f"Таблица t_parking_revenue_stats2 успешно очищена!")
-
-
-    # Загрузка новых данных для t_parking_revenue_stats
-    # select_new_parking_revenue_stats = '''
-    #     SELECT
-    #         NOW() AS add_time ,
-    #         date_trunc('hour', res_tab.timestamp) AS timestamp,
-    #         res_tab.city_id ,
-    #         res_tab.parking_id ,
-    #         COUNT(res_tab.ride_amount) AS poezdok,
-    #         SUM(res_tab.ride_amount) AS obzchaya_stoimost,
-    #         SUM(res_tab.discount) AS oplacheno_bonusami,
-    #         SUM(res_tab.bike_discount_amount) AS skidka ,
-    #         SUM(res_tab.subscription_price) AS abon
-    #     FROM
-    #         (
-    #         SELECT
-    #             tor."timestamp" ,
-    #             tor.start_lat ,
-    #             tor.start_lng ,
-    #             tor.ride_amount ,
-    #             tor.discount ,
-    #             tor.bike_discount_amount ,
-    #             tor.subscription_price ,
-    #             ta.city_id ,
-    #             ta.id AS parking_id ,
-    #             6371000 * acos(
-    #                             cos(radians(tor.start_lat)) *
-    #                             cos(radians(ta.lat)) *
-    #                             cos(radians(ta.lng) - radians(tor.start_lng)) +
-    #                             sin(radians(tor.start_lat)) *
-    #                             sin(radians(ta.lat))) AS distance ,
-    #             RANK() OVER (PARTITION BY tor.id ORDER BY 6371000 * acos(
-    #                                                                     cos(radians(tor.start_lat)) *
-    #                                                                     cos(radians(ta.lat)) *
-    #                                                                     cos(radians(ta.lng) - radians(tor.start_lng)) +
-    #                                                                     sin(radians(tor.start_lat)) *
-    #                                                                     sin(radians(ta.lat)))
-    #                                                                     ) AS rn
-    #         FROM damir.t_orders_revenue tor
-    #         CROSS JOIN damir.t_area ta
-    #         WHERE tor."timestamp" >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-    #         ) AS res_tab
-    #     WHERE res_tab.rn = 1
-    #     GROUP BY date_trunc('hour', res_tab.timestamp), res_tab.city_id , res_tab.parking_id
-    #     ORDER BY date_trunc('hour', res_tab.timestamp) ASC
-    # '''
-
-    # select_new_parking_revenue_stats = '''
-    # WITH dolgi AS (
-    #     SELECT
-    #         dolgi.city_id ,
-    #         SUM(dolgi.debit_cash) AS dolgi
-    #     FROM
-    #     (
-    #         SELECT
-    #             dolgi.city_id ,
-    #             tpd.debit_cash
-    #         FROM damir.t_payment_details tpd
-    #         RIGHT JOIN (
-    #             SELECT
-    #                 tbu."date" ,
-    #                 tbu.id,
-    #                 tbu.uid,
-    #                 tbu.bid ,
-    #                 tb.city_id ,
-    #                 tbu.ride_amount
-    #             FROM damir.t_bike_use tbu
-    #             LEFT JOIN t_bike tb ON tbu.bid = tb.id
-    #             WHERE tbu.ride_status = 2
-    #                 AND to_timestamp( tbu.start_time)::date >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-    #             ) AS dolgi ON tpd.ride_id = dolgi.id
-    #         ) AS dolgi
-    #     GROUP BY dolgi.city_id
-    # ),
-    # vyruchka_s_abonementov AS (
-    #     SELECT
-    #         distr_poezdki_po_gorodam.city_id,
-    #         sum_uspeh_abon.vyruchka_s_abonementov * distr_poezdki_po_gorodam.coef_goroda AS vyruchka_s_abonementov
-    #     FROM (
-    #         -- высчитываю пропорции по поездкам
-    #         SELECT
-    #             distr_poezdki_po_gorodam.start_time,
-    #             distr_poezdki_po_gorodam.city_id,
-    #             distr_poezdki_po_gorodam.poezdok,
-    #             -- Приведение к numeric важно, чтобы результат деления не был 0
-    #             distr_poezdki_po_gorodam.poezdok::numeric / SUM(distr_poezdki_po_gorodam.poezdok) OVER (PARTITION BY distr_poezdki_po_gorodam.start_time) AS coef_goroda
-    #         FROM
-    #             (
-    #             SELECT
-    #                 TO_CHAR(TO_TIMESTAMP(t_bike_use.start_time), 'YYYY-MM-DD') AS start_time,
-    #                 t_bike.city_id,
-    #                 COUNT(t_bike_use.ride_amount) AS poezdok
-    #             FROM damir.t_bike_use
-    #             LEFT JOIN damir.t_bike ON t_bike_use.bid = t_bike.id
-    #             WHERE t_bike_use.ride_status != 5
-    #                 AND TO_TIMESTAMP(t_bike_use.start_time) >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-    #             GROUP BY 1, 2
-    #             )
-    #             AS distr_poezdki_po_gorodam
-    #     ) AS distr_poezdki_po_gorodam
-    #     LEFT JOIN (
-    #         SELECT
-    #             TO_CHAR(t_trade.date, 'YYYY-MM-DD') AS start_time,
-    #             SUM(COALESCE(t_trade.amount, 0)) AS vyruchka_s_abonementov
-    #         FROM damir.t_trade
-    #         WHERE t_trade.type = 6
-    #             AND t_trade.status = 1
-    #             AND t_trade.date >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-    #         GROUP BY 1
-    #         ) AS sum_uspeh_abon
-    #         ON distr_poezdki_po_gorodam.start_time = sum_uspeh_abon.start_time
-    # ),
-    # sum_mnogor_abon AS (
-    #     SELECT
-    #         distr_poezdki_po_gorodam.city_id,
-    #         sum_mnogor_abon.sum_mnogor_abon * distr_poezdki_po_gorodam.coef_goroda AS sum_mnogor_abon
-    #     FROM (
-    #         -- высчитываю пропорции по поездкам
-    #         SELECT
-    #             dp.start_time,
-    #             dp.city_id,
-    #             dp.poezdok,
-    #             dp.poezdok::numeric / NULLIF(SUM(COALESCE(dp.poezdok, 0)) OVER (PARTITION BY dp.start_time), 0) AS coef_goroda
-    #         FROM (
-    #             SELECT
-    #                 TO_CHAR(TO_TIMESTAMP(t_bike_use.start_time), 'YYYY-MM-DD') AS start_time,
-    #                 t_bike.city_id,
-    #                 COUNT(t_bike_use.ride_amount) AS poezdok
-    #             FROM damir.t_bike_use
-    #             LEFT JOIN damir.t_bike ON t_bike_use.bid = t_bike.id
-    #             WHERE t_bike_use.ride_status != 5
-    #                 AND TO_TIMESTAMP(t_bike_use.start_time) >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-    #             GROUP BY 1, 2
-    #         ) AS dp
-    #     ) AS distr_poezdki_po_gorodam
-    #     LEFT JOIN (
-    #         SELECT
-    #             TO_CHAR(t_subscription_mapping.start_time, 'YYYY-MM-DD') AS start_time,
-    #             SUM(COALESCE(t_subscription.price, 0)) AS sum_mnogor_abon
-    #         FROM damir.t_subscription_mapping
-    #         LEFT JOIN damir.t_subscription ON t_subscription_mapping.subscription_id = t_subscription.id
-    #         WHERE t_subscription_mapping.start_time >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-    #         GROUP BY 1
-    #     ) AS sum_mnogor_abon
-    #     ON distr_poezdki_po_gorodam.start_time = sum_mnogor_abon.start_time
-    # )
-    # SELECT
-    #     NOW() AS add_time ,
-    #     date_trunc('hour', res.timestamp) AS timestamp,
-    #     res.city_id ,
-    #     res.parking_id ,
-    #     res.poezdok ,
-    #     res.obzchaya_stoimost ,
-    #     res.oplacheno_bonusami ,
-    #     res.skidka ,
-    #     res.abon ,
-    #     ROUND((res.poezdok / SUM(res.poezdok) OVER (PARTITION BY res.city_id)) * COALESCE(dolgi.dolgi, 0), 2)::float AS dolgi ,
-    #     ROUND(((res.poezdok / SUM(res.poezdok) OVER (PARTITION BY res.city_id)) * COALESCE(vyruchka_s_abonementov.vyruchka_s_abonementov, 0))::numeric, 2)::float AS vyruchka_s_abonementov ,
-    #     ROUND((res.poezdok / SUM(res.poezdok) OVER (PARTITION BY res.city_id)) * COALESCE(sum_mnogor_abon.sum_mnogor_abon, 0), 2)::float AS sum_mnogor_abon
-    # FROM
-    # (
-    #     SELECT
-    #         date_trunc('hour', res_tab.timestamp) AS timestamp,
-    #         res_tab.city_id ,
-    #         res_tab.parking_id ,
-    #         COUNT(res_tab.ride_amount) AS poezdok ,
-    #         SUM(res_tab.ride_amount) AS obzchaya_stoimost,
-    #         SUM(res_tab.discount) AS oplacheno_bonusami,
-    #         SUM(res_tab.bike_discount_amount) AS skidka ,
-    #         SUM(res_tab.subscription_price) AS abon
-    #     FROM
-    #         (
-    #         SELECT
-    #             tor."timestamp" ,
-    #             tor.start_lat ,
-    #             tor.start_lng ,
-    #             tor.ride_amount ,
-    #             tor.discount ,
-    #             tor.bike_discount_amount ,
-    #             tor.subscription_price ,
-    #             ta.city_id ,
-    #             ta.id AS parking_id ,
-    #             6371000 * acos(
-    #                             cos(radians(tor.start_lat)) *
-    #                             cos(radians(ta.lat)) *
-    #                             cos(radians(ta.lng) - radians(tor.start_lng)) +
-    #                             sin(radians(tor.start_lat)) *
-    #                             sin(radians(ta.lat))) AS distance ,
-    #             RANK() OVER (PARTITION BY tor.id ORDER BY 6371000 * acos(
-    #                                                                     cos(radians(tor.start_lat)) *
-    #                                                                     cos(radians(ta.lat)) *
-    #                                                                     cos(radians(ta.lng) - radians(tor.start_lng)) +
-    #                                                                     sin(radians(tor.start_lat)) *
-    #                                                                     sin(radians(ta.lat)))
-    #                                                                     ) AS rn
-    #         FROM damir.t_orders_revenue tor
-    #         CROSS JOIN damir.t_area ta
-    #         WHERE tor."timestamp" >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-    #         ) AS res_tab
-    #     WHERE res_tab.rn = 1
-    #     GROUP BY date_trunc('hour', res_tab.timestamp), res_tab.city_id , res_tab.parking_id
-    # ) AS res
-    # LEFT JOIN dolgi ON res.city_id = dolgi.city_id
-    # LEFT JOIN vyruchka_s_abonementov ON res.city_id = vyruchka_s_abonementov.city_id
-    # LEFT JOIN sum_mnogor_abon ON res.city_id = sum_mnogor_abon.city_id
-    # '''
-    #
-    # df_new_parking_revenue_stats = pd.read_sql(select_new_parking_revenue_stats, engine_postgresql)
-    #
-    # df_new_parking_revenue_stats.to_sql("t_parking_revenue_stats", engine_postgresql, if_exists="append",
-    #                                     index=False)
 
     select_new_parking_revenue_stats1 = '''
      WITH dolgi AS (
@@ -3864,7 +3608,6 @@ def main():
                 LEFT JOIN t_bike tb ON tbu.bid = tb.id
                 WHERE tbu.ride_status = 2 
                     AND to_timestamp( tbu.start_time) >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-                    --AND to_timestamp( tbu.start_time) >= '2025-12-18'::date
                 ) AS dolgi ON tpd.ride_id = dolgi.id 
             ) AS dolgi
         GROUP BY dolgi.city_id
@@ -3891,7 +3634,6 @@ def main():
                 LEFT JOIN damir.t_bike ON t_bike_use.bid = t_bike.id
                 WHERE t_bike_use.ride_status != 5 
                     AND TO_TIMESTAMP(t_bike_use.start_time) >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-                    --AND TO_TIMESTAMP(t_bike_use.start_time) >= '2025-12-18'::date
                 GROUP BY 1, 2
                 ) 
                 AS distr_poezdki_po_gorodam
@@ -3904,7 +3646,6 @@ def main():
             WHERE t_trade.type = 6 
                 AND t_trade.status = 1 
                 AND t_trade.date >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-                --AND t_trade.date >= '2025-12-18'::date
             GROUP BY 1
             ) AS sum_uspeh_abon
             ON distr_poezdki_po_gorodam.start_time = sum_uspeh_abon.start_time
@@ -3929,7 +3670,6 @@ def main():
                 LEFT JOIN damir.t_bike ON t_bike_use.bid = t_bike.id
                 WHERE t_bike_use.ride_status != 5 
                     AND TO_TIMESTAMP(t_bike_use.start_time) >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-                    --AND TO_TIMESTAMP(t_bike_use.start_time) >= '2025-12-18'::date
                 GROUP BY 1, 2
             ) AS dp
         ) AS distr_poezdki_po_gorodam
@@ -3941,7 +3681,6 @@ def main():
             LEFT JOIN damir.t_subscription ON t_subscription_mapping.subscription_id = t_subscription.id
             WHERE 
                 t_subscription_mapping.start_time >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-                --t_subscription_mapping.start_time >= '2025-12-18'::date 
             GROUP BY 1
         ) AS sum_mnogor_abon
         ON distr_poezdki_po_gorodam.start_time = sum_mnogor_abon.start_time
@@ -3950,7 +3689,6 @@ def main():
         NOW() AS add_time ,
         date_trunc('hour', res.timestamp) AS timestamp,
         res.city_id ,
-        --tc.name AS city_name ,
         res.parking_id ,
         res.poezdok ,
         res.obzchaya_stoimost ,
@@ -4001,7 +3739,6 @@ def main():
             WHERE 
                 tor."timestamp" >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
                 AND ta.active = 1
-                --tor."timestamp" >= '2025-12-18'::date
             ) AS res_tab
         WHERE res_tab.rn = 1
         GROUP BY date_trunc('hour', res_tab.timestamp), res_tab.city_id , res_tab.parking_id
@@ -4036,7 +3773,6 @@ def main():
                 LEFT JOIN t_bike tb ON tbu.bid = tb.id
                 WHERE tbu.ride_status = 2 
                     AND to_timestamp( tbu.start_time) >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-                    --AND to_timestamp( tbu.start_time) >= '2025-12-18'::date
                 ) AS dolgi ON tpd.ride_id = dolgi.id 
             ) AS dolgi
         GROUP BY dolgi.city_id
@@ -4051,7 +3787,6 @@ def main():
                 distr_poezdki_po_gorodam.start_time,
                 distr_poezdki_po_gorodam.city_id,
                 distr_poezdki_po_gorodam.poezdok,
-                -- Приведение к numeric важно, чтобы результат деления не был 0
                 distr_poezdki_po_gorodam.poezdok::numeric / SUM(distr_poezdki_po_gorodam.poezdok) OVER (PARTITION BY distr_poezdki_po_gorodam.start_time) AS coef_goroda
             FROM 
                 (
@@ -4063,7 +3798,6 @@ def main():
                 LEFT JOIN damir.t_bike ON t_bike_use.bid = t_bike.id
                 WHERE t_bike_use.ride_status != 5 
                     AND TO_TIMESTAMP(t_bike_use.start_time) >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-                    --AND TO_TIMESTAMP(t_bike_use.start_time) >= '2025-12-18'::date
                 GROUP BY 1, 2
                 ) 
                 AS distr_poezdki_po_gorodam
@@ -4076,7 +3810,6 @@ def main():
             WHERE t_trade.type = 6 
                 AND t_trade.status = 1 
                 AND t_trade.date >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-                --AND t_trade.date >= '2025-12-18'::date
             GROUP BY 1
             ) AS sum_uspeh_abon
             ON distr_poezdki_po_gorodam.start_time = sum_uspeh_abon.start_time
@@ -4101,7 +3834,6 @@ def main():
                 LEFT JOIN damir.t_bike ON t_bike_use.bid = t_bike.id
                 WHERE t_bike_use.ride_status != 5 
                     AND TO_TIMESTAMP(t_bike_use.start_time) >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-                    --AND TO_TIMESTAMP(t_bike_use.start_time) >= '2025-12-18'::date
                 GROUP BY 1, 2
             ) AS dp
         ) AS distr_poezdki_po_gorodam
@@ -4113,7 +3845,6 @@ def main():
             LEFT JOIN damir.t_subscription ON t_subscription_mapping.subscription_id = t_subscription.id
             WHERE 
                 t_subscription_mapping.start_time >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-                --t_subscription_mapping.start_time >= '2025-12-18'::date 
             GROUP BY 1
         ) AS sum_mnogor_abon
         ON distr_poezdki_po_gorodam.start_time = sum_mnogor_abon.start_time
@@ -4124,7 +3855,6 @@ def main():
         res.city_id ,
         tap.area_id ,
         tap.area_name ,
-        --tc.name AS city_name ,
         res.parking_id ,
         res.parking_name ,
         res.poezdok ,
@@ -4178,7 +3908,6 @@ def main():
             WHERE 
                 tor."timestamp" >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
                 AND ta.active = 1
-                --tor."timestamp" >= '2025-12-18'::date
             ) AS res_tab
         WHERE res_tab.rn = 1
         GROUP BY date_trunc('hour', res_tab.timestamp), res_tab.city_id , res_tab.parking_id, res_tab.parking_name
@@ -4197,68 +3926,6 @@ def main():
                                         index=False)
     df_new_parking_revenue_stats2.to_sql("t_parking_revenue_stats2", engine_postgresql, if_exists="append",
                                          index=False)
-
-
-    #   Выгрузка t_parking_revenue_stats. Конец
-
-
-    # Выгрузка t_parking_kvt. Начало
-
-    # Выгрузка t_parking_kvt
-    # select_t_parking_kvt = '''
-    #        SELECT
-    #             NOW() + INTERVAL '2 hour' AS add_time ,
-    #             res.timestamp - INTERVAL '1 hour' AS timestamp ,
-    #             res.city_id ,
-    #             res.parking_id ,
-    #             COUNT(res.id) AS kvt
-    #         FROM
-    #             (
-    #             SELECT
-    #                 res_tab.timestamp_hour AS "timestamp" ,
-    #                 ta.city_id ,
-    #                 ta.id AS parking_id ,
-    #                 res_tab.id ,
-    #                 6371000 * acos(
-    #                                     cos(radians(res_tab.g_lat)) *
-    #                                     cos(radians(ta.lat)) *
-    #                                     cos(radians(ta.lng) - radians(res_tab.g_lng)) +
-    #                                     sin(radians(res_tab.g_lat)) *
-    #                                     sin(radians(ta.lat))) AS distance ,
-    #                 RANK() OVER (PARTITION BY res_tab.timestamp_hour, res_tab.id ORDER BY 6371000 * acos(
-    #                                                                                             cos(radians(res_tab.g_lat)) *
-    #                                                                                             cos(radians(ta.lat)) *
-    #                                                                                             cos(radians(ta.lng) - radians(res_tab.g_lng)) +
-    #                                                                                             sin(radians(res_tab.g_lat)) *
-    #                                                                                             sin(radians(ta.lat))) ASC) AS rn
-    #             FROM
-    #                 (
-    #                 SELECT
-    #                     date_trunc('hour', tbh."timestamp")  +
-    #                                                            CASE
-    #                                                              WHEN EXTRACT(minute FROM tbh."timestamp") > 0 THEN INTERVAL '1 hour'
-    #                                                              ELSE INTERVAL '0 hour'
-    #                                                            END AS "timestamp_hour" ,
-    #                     tbh.id ,
-    #                     tbh.g_lat ,
-    #                     tbh.g_lng ,
-    #                     RANK() OVER (PARTITION BY date_trunc('hour', tbh."timestamp")  +
-    #                                                            CASE
-    #                                                              WHEN EXTRACT(minute FROM tbh."timestamp") > 0 THEN INTERVAL '1 hour'
-    #                                                              ELSE INTERVAL '0 hour'
-    #                                                            END, tbh.id ORDER BY tbh."timestamp" DESC) AS rn
-    #                 FROM damir.t_bike_history tbh
-    #                 WHERE tbh.error_status IN (0,7)
-    #                     AND tbh."timestamp" >= DATE(NOW() + INTERVAL '2 hours') - INTERVAL '1 hours'
-    #                     AND tbh."timestamp" <= NOW() + INTERVAL '2 hour'
-    #                     ) AS res_tab
-    #             CROSS JOIN damir.t_area ta
-    #             WHERE res_tab.rn = 1
-    #             ) AS res
-    #         WHERE res.rn = 1
-    #         GROUP BY res.timestamp , res.city_id , res.parking_id
-    #         ORDER BY res.timestamp ASC
-    # '''
 
     select_t_parking_kvt1 = '''
     SELECT
@@ -4308,40 +3975,7 @@ def main():
     GROUP BY res.timestamp , res.city_id , res.parking_id
     ORDER BY res.timestamp ASC
     '''
-    # df_t_parking_kvt = pd.read_sql(select_t_parking_kvt, engine_postgresql)
     df_t_parking_kvt1 = pd.read_sql(select_t_parking_kvt1, engine_postgresql)
-
-    # # Проверка количества строк. Начало
-    # select_df_parking_count = '''
-    #         SELECT
-    #             min("timestamp") ,
-    #             max("timestamp") ,
-    #             count(*)
-    #         FROM damir.t_parking_kvt
-    #         WHERE damir.t_parking_kvt."timestamp" >= DATE(NOW() + INTERVAL '2 hours') - INTERVAL '1 hours'
-    #                AND damir.t_parking_kvt."timestamp" <= NOW() + INTERVAL '2 hour'
-    #     '''
-    # df_parking_count = pd.read_sql(select_df_parking_count, engine_postgresql)
-    # print('Количество записей к удалению в parking_count_kvt: {}, {}, {}'.format(df_parking_count.iloc[0].iloc[2],
-    #                                                                              df_parking_count.iloc[0].iloc[0],
-    #                                                                              df_parking_count.iloc[0].iloc[1]))
-    # # Проверка количества строк. Конец
-
-
-    # # Очистка старых данных в t_parking_kvt
-    # truncate_t_parking_kvt = '''DELETE FROM damir.t_parking_kvt
-    #    WHERE damir.t_parking_kvt."timestamp" >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours';
-    #    '''
-    ' '
-    # with engine_postgresql.connect() as connection:
-    #     with connection.begin() as transaction:
-    #         connection.execute(sa.text(truncate_t_parking_kvt))
-    #         transaction.commit()
-    #         print(f"Таблица t_parking_kvt успешно очищена!")
-
-    # df_t_parking_kvt.to_sql("t_parking_kvt", engine_postgresql, if_exists="append", index=False)
-    # print('Таблица df_t_parking_kvt успешно обновлена!')
-
 
     # Очистка старых данных в t_parking_kvt1
     truncate_t_parking_kvt1 = '''DELETE FROM damir.t_parking_kvt1
@@ -4357,113 +3991,6 @@ def main():
     df_t_parking_kvt1.to_sql("t_parking_kvt1", engine_postgresql, if_exists="append", index=False)
     print('Таблица df_t_parking_kvt1 успешно обновлена!')
 
-    # # Проверка количества строк. Начало
-    # select_df_parking_count111 = '''
-    #             SELECT
-    #                 min("timestamp") ,
-    #                 max("timestamp") ,
-    #                 count(*)
-    #             FROM damir.t_parking_kvt
-    #         '''
-    # df_parking_count111 = pd.read_sql(select_df_parking_count111, engine_postgresql)
-    # print('Всего записей в parking_count_kvt: {}, {}, {}'.format(df_parking_count111.iloc[0].iloc[2],
-    #                                                                              df_parking_count111.iloc[0].iloc[0],
-    #                                                                              df_parking_count111.iloc[0].iloc[1]))
-    # # Проверка количества строк. Конец
-
-
-    # Выгрузка t_parking_kvt. Конец
-
-    # Выгрузка t_area_revenue_stats. Начало
-    # Копирую t_area_revenue_stats
-    # select_t_area_revenue_stats = '''
-    #     SELECT
-    #         NOW() AS add_time ,
-    #         res."date" ,
-    #         res.city_id ,
-    #         res.area ,
-    #         SUM(res.kvt)/24 AS kvt ,
-    #         SUM(res.poezdok) AS poezdok ,
-    #         SUM(res.obzchaya_stoimost) AS obzchaya_stoimost,
-    #         SUM(res.oplacheno_bonusami) AS oplacheno_bonusami,
-    #         SUM(res.skidka) AS skidka,
-    #         SUM(res.abon) AS abon
-    #     FROM
-    #         (
-    #         SELECT
-    #             DATE_TRUNC('day', COALESCE(tpk."timestamp" , dtprs."timestamp" ))::date AS date ,
-    #             COALESCE(tpk.city_id , dtprs.city_id ) AS city_id,
-    #             p.area ,
-    #             COALESCE(tpk.parking_id , dtprs.parking_id ) AS parking_id,
-    #             COALESCE(tpk.kvt, 0)::int AS kvt,
-    #             COALESCE(dtprs.poezdok, 0)::int AS poezdok,
-    #             COALESCE(dtprs.obzchaya_stoimost, 0)::float AS obzchaya_stoimost,
-    #             COALESCE(dtprs.oplacheno_bonusami, 0)::float AS oplacheno_bonusami,
-    #             COALESCE(dtprs.skidka, 0)::float AS skidka,
-    #             COALESCE(dtprs.abon, 0)::float AS abon
-    #         FROM damir.t_parking_kvt tpk
-    #         FULL JOIN damir.t_parking_revenue_stats dtprs ON tpk."timestamp" = dtprs."timestamp" AND tpk.city_id = dtprs.city_id AND tpk.parking_id = dtprs.parking_id
-    #         LEFT JOIN public.parking p ON COALESCE(tpk.parking_id , dtprs.parking_id ) = p.parking_id
-    #         ) AS res
-    #     GROUP BY res."date" , res.city_id , res.area
-    #     ORDER BY res."date" ASC
-    # '''
-    # select_t_area_revenue_stats = '''
-    # WITH kvt AS (
-    #     SELECT
-    #         date_trunc('day', tpk."timestamp")::date AS date,
-    #         tpk.city_id ,
-    #         tpk.parking_id ,
-    #         ROUND(AVG(tpk.kvt)) AS kvt
-    #     FROM damir.t_parking_kvt tpk
-    #     --WHERE tpk.city_id = 22
-    #     GROUP BY date_trunc('day', tpk."timestamp")::date, tpk.city_id, tpk.parking_id
-    # ),
-    # revenue AS (
-    #     SELECT
-    #         date_trunc('day', dtprs."timestamp")::date AS date,
-    #         dtprs.city_id ,
-    #         dtprs.parking_id ,
-    #         SUM(dtprs.poezdok) AS poezdok,
-    #         SUM(dtprs.obzchaya_stoimost) AS obzchaya_stoimost,
-    #         SUM(dtprs.oplacheno_bonusami) AS oplacheno_bonusami,
-    #         SUM(dtprs.skidka) AS skidka,
-    #         SUM(dtprs.abon) AS abon
-    #     FROM damir.t_parking_revenue_stats dtprs
-    #     GROUP BY date_trunc('day', dtprs."timestamp")::date , dtprs.city_id , dtprs.parking_id
-    # )
-    # SELECT
-    #     NOW() AS add_time ,
-    #     res."date" ,
-    #     res.city_id ,
-    #     res.area ,
-    #     SUM(res.kvt) AS kvt ,
-    #     SUM(res.poezdok) AS poezdok ,
-    #     SUM(res.obzchaya_stoimost) AS obzchaya_stoimost,
-    #     SUM(res.oplacheno_bonusami) AS oplacheno_bonusami,
-    #     SUM(res.skidka) AS skidka,
-    #     SUM(res.abon) AS abon
-    # FROM
-    # (
-    #     SELECT
-    #         kvt.date ,
-    #         COALESCE(kvt.city_id, revenue.city_id) AS city_id,
-    #         p.area ,
-    #         COALESCE(kvt.parking_id, revenue.parking_id) AS parking_id ,
-    #         COALESCE(kvt.kvt, 0) AS kvt,
-    #         COALESCE(revenue.poezdok, 0) AS poezdok,
-    #         COALESCE(revenue.obzchaya_stoimost, 0) AS obzchaya_stoimost,
-    #         COALESCE(revenue.oplacheno_bonusami, 0) AS oplacheno_bonusami,
-    #         COALESCE(revenue.skidka, 0) AS skidka,
-    #         COALESCE(revenue.abon, 0) AS abon
-    #     FROM kvt
-    #     LEFT JOIN revenue ON kvt.date = revenue.date AND kvt.city_id = revenue.city_id AND kvt.parking_id = revenue.parking_id
-    #     LEFT JOIN public.parking p ON COALESCE(kvt.parking_id , revenue.parking_id ) = p.parking_id
-    # ) AS res
-    # GROUP BY res."date"::date , res.city_id , res.area
-    # ORDER BY res."date" ASC
-    # '''
-
     select_t_area_revenue_stats1 = '''
     WITH revenue AS (
         SELECT
@@ -4471,7 +3998,6 @@ def main():
             tprs.city_id ,
             tprs.parking_id ,
             SUM(tprs.poezdok) AS poezdok,
-            --SUM(tprs.obzchaya_stoimost) - SUM(tprs.dolgi) - (SUM(tprs.vyruchka_s_abonementov) - SUM(tprs.sum_mnogor_abon)) - SUM(tprs.oplacheno_bonusami) + SUM(tprs.vyruchka_s_abonementov) - SUM(tprs.skidka) AS dd ,
             SUM(tprs.obzchaya_stoimost) AS obzchaya_stoimost,
             SUM(tprs.oplacheno_bonusami) AS oplacheno_bonusami,
             SUM(tprs.skidka) AS skidka,
@@ -4526,21 +4052,7 @@ def main():
     ORDER BY res.timestamp
     '''
 
-    # df_t_area_revenue_stats = pd.read_sql(select_t_area_revenue_stats, engine_postgresql)
     df_t_area_revenue_stats1 = pd.read_sql(select_t_area_revenue_stats1, engine_postgresql)
-
-    # Очистка таблицы
-    # truncate_t_area_revenue_stats = "TRUNCATE TABLE t_area_revenue_stats RESTART IDENTITY;"
-    # with engine_postgresql.connect() as connection:
-    #     with connection.begin() as transaction:
-    #         print(f"Попытка очистить таблицу")
-    #         # Очистка t_area_revenue_stats
-    #         connection.execute(sa.text(truncate_t_area_revenue_stats))
-    #         # Если ошибок нет, транзакция фиксируется автоматически
-    #         print(f"Таблица t_area_revenue_stats успешно очищена!")
-
-    # df_t_area_revenue_stats.to_sql("t_area_revenue_stats", engine_postgresql, if_exists="append", index=False)
-    # print('Таблица t_area_revenue_stats успешно обновлена!')
 
     # Очистка таблицы
     truncate_t_area_revenue_stats1 = "TRUNCATE TABLE t_area_revenue_stats1 RESTART IDENTITY;"
@@ -4554,276 +4066,6 @@ def main():
 
     df_t_area_revenue_stats1.to_sql("t_area_revenue_stats1", engine_postgresql, if_exists="append", index=False)
     print('Таблица t_area_revenue_stats1 успешно обновлена!')
-
-    # Выгрузка t_area_revenue_stats. Конец
-
-
-
-    # # Выгрузка t_area_revenue_stats2 pandas. Начало
-    # # Очистка старых данных t_area_revenue_stats2
-    # truncate_t_area_revenue_stats2 = '''
-    # DELETE FROM damir.t_area_revenue_stats2
-    # WHERE damir.t_area_revenue_stats2."timestamp_hour" >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours';
-    # '''
-    # with engine_postgresql.connect() as connection:
-    #     with connection.begin() as transaction:
-    #         connection.execute(sa.text(truncate_t_area_revenue_stats2))
-    #         transaction.commit()
-    #         print(f"Таблица t_area_revenue_stats2 успешно очищена!")
-
-    # # КВТ
-    # select_kvt = '''
-    #     SELECT 
-    #         res_tab."timestamp" ,
-    #         res_tab.timestamp_hour ,
-    #         res_tab.id ,
-    #         res_tab.city_id ,
-    #         res_tab.g_lat ,
-    #         res_tab.g_lng
-    #     FROM 
-    #     (
-    #         SELECT 
-    #             tbh."timestamp" ,
-    #             date_trunc('hour', tbh."timestamp") AS "timestamp_hour" ,
-    #             tbh.id ,
-    #             tbh.g_lat ,
-    #             tbh.g_lng ,
-    #             tb.city_id ,
-    #             RANK() OVER (PARTITION BY date_trunc('hour', tbh."timestamp") ORDER BY tbh."timestamp" DESC) AS rn
-    #         FROM damir.t_bike_history tbh
-    #         LEFT JOIN damir.t_bike tb ON tbh.id = tb.id 
-    #         WHERE tbh.error_status IN (0,7)
-    #             AND tbh."timestamp" >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-    #         ) AS res_tab
-    #     WHERE res_tab.rn = 1
-    # '''
-    # df_kvt = pd.read_sql(select_kvt, engine_postgresql)
-
-    # # Выгрузка areas
-    # select_areas = '''
-    #     SELECT
-    #         ta.city_id ,
-    #         ta.id AS area_id ,
-    #         ta."name" AS area_name ,
-    #         ta.detail AS area_detail
-    #     FROM damir.t_area ta
-    #     WHERE ta."name" LIKE '%%| Area |%%'
-    # '''
-    # df_areas = pd.read_sql(select_areas, engine_postgresql)
-
-    # # area в полигоны
-    # df_areas['area_poly'] = df_areas['area_detail'].apply(decode_polyline_to_tuples)
-
-    # # Соединяю КВТ и area
-    # df_kvt_area = df_kvt.merge(df_areas, how='cross')
-    # df_kvt_area['res'] = df_kvt_area.apply(poly_contains_point_kvt, axis=1)
-    # df_kvt_area_res = df_kvt_area[df_kvt_area['res'] == True]
-    # df_kvt_area_res = df_kvt.merge(df_kvt_area_res, how='left', on=['timestamp_hour', 'id'])
-    # df_kvt_area_res = df_kvt_area_res[['timestamp_hour', 'id', 'city_id', 'city_id_y', 'area_id', 'area_name']]
-    # df_kvt_area_res = df_kvt_area_res.groupby(['timestamp_hour', 'city_id', 'area_id', 'area_name'], dropna=False) \
-    #     .agg({'id': 'count'}) \
-    #     .rename(columns={'id': 'kvt'}) \
-    #     .reset_index() \
-    #     .fillna(0)
-
-    # # Выгрузка заказов
-    # select_orders = '''
-    #     SELECT 
-    #         date_trunc('hour', tor."timestamp") AS timestamp_hour ,
-    #         tor.id ,
-    #         tb.city_id ,
-    #         tor.start_lat ,
-    #         tor.start_lng ,
-    #         tor.ride_amount ,
-    #         tor.discount ,
-    #         tor.bike_discount_amount ,
-    #         tor.subscription_price 
-    #     FROM damir.t_orders_revenue tor 
-    #     LEFT JOIN damir.t_bike tb ON tor.bid = tb.id
-    #     WHERE tor."timestamp" >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-    # '''
-    # df_orders = pd.read_sql(select_orders, engine_postgresql)
-
-    # # Соединяю orders и area
-    # df_orders_area = df_orders.merge(df_areas, how='cross')
-    # df_orders_area['res'] = df_orders_area.apply(poly_contains_point_orders, axis=1)
-    # df_orders_area = df_orders_area[df_orders_area['res'] == True]
-    # df_orders_areas_res = df_orders.merge(df_orders_area, on=['timestamp_hour', 'id'], how='left')
-    # df_orders_areas_res = df_orders_areas_res.groupby(['timestamp_hour', 'city_id', 'area_id', 'area_name'],
-    #                                                   dropna=False) \
-    #     .agg({'id': 'count',
-    #           'ride_amount_x': 'sum',
-    #           'discount_x': 'sum',
-    #           'bike_discount_amount_x': 'sum',
-    #           'subscription_price_x': 'sum'}) \
-    #     .rename(columns={'id': 'poezdok',
-    #                      'ride_amount_x': 'obzchaya_stoimost',
-    #                      'discount_x': 'oplacheno_bonusami',
-    #                      'bike_discount_amount_x': 'skidka',
-    #                      'subscription_price_x': 'abon'}) \
-    #     .reset_index() \
-    #     .fillna(0)
-
-    # # Выгрузка показателей для распределения
-    # select_distr = '''
-    #     WITH dolgi AS (
-    #         SELECT
-    #             dolgi.city_id ,
-    #             SUM(dolgi.debit_cash) AS dolgi
-    #         FROM 
-    #         (
-    #             SELECT
-    #                 dolgi.city_id ,
-    #                 tpd.debit_cash
-    #             FROM damir.t_payment_details tpd 
-    #             RIGHT JOIN (
-    #                 SELECT 
-    #                     tbu."date" ,
-    #                     tbu.id,
-    #                     tbu.uid,
-    #                     tbu.bid ,
-    #                     tb.city_id ,
-    #                     tbu.ride_amount 
-    #                 FROM damir.t_bike_use tbu
-    #                 LEFT JOIN t_bike tb ON tbu.bid = tb.id
-    #                 WHERE tbu.ride_status = 2 
-    #                     AND to_timestamp( tbu.start_time) >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-    #                     --AND to_timestamp( tbu.start_time) >= '2025-12-18'::date
-    #                 ) AS dolgi ON tpd.ride_id = dolgi.id 
-    #             ) AS dolgi
-    #         GROUP BY dolgi.city_id
-    #     ),
-    #     vyruchka_s_abonementov AS (
-    #         SELECT 
-    #             distr_poezdki_po_gorodam.city_id,
-    #             sum_uspeh_abon.vyruchka_s_abonementov * distr_poezdki_po_gorodam.coef_goroda AS vyruchka_s_abonementov
-    #         FROM (
-    #             -- высчитываю пропорции по поездкам
-    #             SELECT 
-    #                 distr_poezdki_po_gorodam.start_time,
-    #                 distr_poezdki_po_gorodam.city_id,
-    #                 distr_poezdki_po_gorodam.poezdok,
-    #                 -- Приведение к numeric важно, чтобы результат деления не был 0
-    #                 distr_poezdki_po_gorodam.poezdok::numeric / SUM(distr_poezdki_po_gorodam.poezdok) OVER (PARTITION BY distr_poezdki_po_gorodam.start_time) AS coef_goroda
-    #             FROM 
-    #                 (
-    #                 SELECT 
-    #                     TO_CHAR(TO_TIMESTAMP(t_bike_use.start_time), 'YYYY-MM-DD') AS start_time,
-    #                     t_bike.city_id,
-    #                     COUNT(t_bike_use.ride_amount) AS poezdok
-    #                 FROM damir.t_bike_use
-    #                 LEFT JOIN damir.t_bike ON t_bike_use.bid = t_bike.id
-    #                 WHERE t_bike_use.ride_status != 5 
-    #                     AND TO_TIMESTAMP(t_bike_use.start_time) >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-    #                     --AND TO_TIMESTAMP(t_bike_use.start_time) >= '2025-12-18'::date
-    #                 GROUP BY 1, 2
-    #                 ) 
-    #                 AS distr_poezdki_po_gorodam
-    #         ) AS distr_poezdki_po_gorodam
-    #         LEFT JOIN (
-    #             SELECT 
-    #                 TO_CHAR(t_trade.date, 'YYYY-MM-DD') AS start_time,
-    #                 SUM(COALESCE(t_trade.amount, 0)) AS vyruchka_s_abonementov
-    #             FROM damir.t_trade
-    #             WHERE t_trade.type = 6 
-    #                 AND t_trade.status = 1 
-    #                 AND t_trade.date >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-    #                 --AND t_trade.date >= '2025-12-18'::date
-    #             GROUP BY 1
-    #             ) AS sum_uspeh_abon
-    #             ON distr_poezdki_po_gorodam.start_time = sum_uspeh_abon.start_time
-    #     ),
-    #     sum_mnogor_abon AS (
-    #         SELECT 
-    #             distr_poezdki_po_gorodam.city_id,
-    #             sum_mnogor_abon.sum_mnogor_abon * distr_poezdki_po_gorodam.coef_goroda AS sum_mnogor_abon
-    #         FROM (
-    #             -- высчитываю пропорции по поездкам
-    #             SELECT 
-    #                 dp.start_time,
-    #                 dp.city_id,
-    #                 dp.poezdok,
-    #                 dp.poezdok::numeric / NULLIF(SUM(COALESCE(dp.poezdok, 0)) OVER (PARTITION BY dp.start_time), 0) AS coef_goroda
-    #             FROM (
-    #                 SELECT 
-    #                     TO_CHAR(TO_TIMESTAMP(t_bike_use.start_time), 'YYYY-MM-DD') AS start_time,
-    #                     t_bike.city_id,
-    #                     COUNT(t_bike_use.ride_amount) AS poezdok
-    #                 FROM damir.t_bike_use
-    #                 LEFT JOIN damir.t_bike ON t_bike_use.bid = t_bike.id
-    #                 WHERE t_bike_use.ride_status != 5 
-    #                     AND TO_TIMESTAMP(t_bike_use.start_time) >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-    #                     --AND TO_TIMESTAMP(t_bike_use.start_time) >= '2025-12-18'::date
-    #                 GROUP BY 1, 2
-    #             ) AS dp
-    #         ) AS distr_poezdki_po_gorodam
-    #         LEFT JOIN (
-    #             SELECT 
-    #                 TO_CHAR(t_subscription_mapping.start_time, 'YYYY-MM-DD') AS start_time,
-    #                 SUM(COALESCE(t_subscription.price, 0)) AS sum_mnogor_abon
-    #             FROM damir.t_subscription_mapping
-    #             LEFT JOIN damir.t_subscription ON t_subscription_mapping.subscription_id = t_subscription.id
-    #             WHERE 
-    #                 t_subscription_mapping.start_time >= date_trunc('hour', NOW() + INTERVAL '2 hours') - INTERVAL '2 hours'
-    #                 --t_subscription_mapping.start_time >= '2025-12-18'::date 
-    #             GROUP BY 1
-    #         ) AS sum_mnogor_abon
-    #         ON distr_poezdki_po_gorodam.start_time = sum_mnogor_abon.start_time
-    #     )
-    #     SELECT 
-    #         COALESCE(dolgi.city_id , vyruchka_s_abonementov.city_id , sum_mnogor_abon.city_id ) AS city_id,
-    #         COALESCE(dolgi.dolgi, 0) AS dolgi,
-    #         vyruchka_s_abonementov.vyruchka_s_abonementov ,
-    #         sum_mnogor_abon.sum_mnogor_abon
-    #     FROM dolgi
-    #     FULL JOIN vyruchka_s_abonementov ON dolgi.city_id = vyruchka_s_abonementov.city_id 
-    #     FULL JOIN sum_mnogor_abon ON COALESCE(dolgi.city_id , vyruchka_s_abonementov.city_id ) = sum_mnogor_abon.city_id 
-    # '''
-    # df_distr = pd.read_sql(select_distr, engine_postgresql)
-
-    # # Соединяю основную таблицу с таблицей distr
-    # df_orders_areas_res = df_orders_areas_res.merge(df_distr, how='left', on='city_id')
-    # df_orders_areas_res = df_orders_areas_res.assign(
-    #     cum_poezdok=df_orders_areas_res.groupby('city_id')['poezdok'].transform('sum'))
-    # df_orders_areas_res['dolgi_res'] = df_orders_areas_res['dolgi'] * df_orders_areas_res['poezdok'] / \
-    #                                    df_orders_areas_res['cum_poezdok']
-    # df_orders_areas_res['vyruchka_s_abonementov_res'] = df_orders_areas_res['vyruchka_s_abonementov'] * \
-    #                                                     df_orders_areas_res['poezdok'] / df_orders_areas_res[
-    #                                                         'cum_poezdok']
-    # df_orders_areas_res['sum_mnogor_abon_res'] = df_orders_areas_res['sum_mnogor_abon'] * df_orders_areas_res[
-    #     'poezdok'] / df_orders_areas_res['cum_poezdok']
-
-    # # Соединяю КВТ и orders
-    # df_orders_kvt_area_res = df_kvt_area_res.merge(df_orders_areas_res, how='outer',
-    #                                                on=['timestamp_hour', 'city_id', 'area_id', 'area_name'])
-    # df_orders_kvt_area_res = df_orders_kvt_area_res[['timestamp_hour',
-    #                                                  'city_id',
-    #                                                  'area_id',
-    #                                                  'area_name',
-    #                                                  'kvt',
-    #                                                  'poezdok',
-    #                                                  'obzchaya_stoimost',
-    #                                                  'oplacheno_bonusami',
-    #                                                  'skidka',
-    #                                                  'abon',
-    #                                                  'dolgi_res',
-    #                                                  'vyruchka_s_abonementov_res',
-    #                                                  'sum_mnogor_abon_res']]
-    # df_orders_kvt_area_res = df_orders_kvt_area_res \
-    #     .rename(columns={'dolgi_res': 'dolgi',
-    #                      'vyruchka_s_abonementov_res': 'vyruchka_s_abonementov',
-    #                      'sum_mnogor_abon_res': 'sum_mnogor_abon'}) \
-    #     .fillna(0)
-
-    # # Загрузка свежих данных в t_area_revenue_stats2
-    # df_orders_kvt_area_res.to_sql("t_area_revenue_stats2", engine_postgresql, if_exists="append", index=False)
-    # print('Таблица t_area_revenue_stats2 успешно обновлена!')
-
-
-
-
-    # # Выгрузка t_area_revenue_stats2 pandas. Конец
-
 
 if __name__ == "__main__":
     main()
