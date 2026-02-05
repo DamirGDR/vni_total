@@ -892,194 +892,219 @@ def main():
     df_cities.to_sql("vni_cities", engine_postgresql, if_exists="append", index=False)
 
     print('Got it: VNI_cities')
+
+    google_service_account_json = get_google_creds()
+    with open('google_json.json', 'w') as fp:
+        json.dump(json.loads(google_service_account_json, strict=False), fp)
+    generated_json_file = './google_json.json'
+
     try:
         # # АКБ - начало
 
         select_df1_all = '''
-        -- Собираю из БД MYSQL два склада и их модели
-        WITH t_city_sklady AS (
-            SELECT *
-            FROM t_city
-            CROSS JOIN (
-                SELECT DISTINCT t_bike.model
-                FROM t_bike
-                -- WHERE t_bike.model LIKE '%freego%'
-            ) AS models
-            -- WHERE t_city.id IN (11,12)
-        ),
-        uteryany AS (
+            -- Собираю из БД MYSQL два склада и их модели
+            WITH t_city_sklady AS (
+                SELECT *
+                FROM t_city
+                CROSS JOIN (
+                    SELECT DISTINCT t_bike.model
+                    FROM t_bike
+                ) AS models
+            ),
+            uteryany AS (
+                SELECT
+                    t_bike.city_id,
+                    t_bike.error_status,
+                    t_bike.model,
+                    COUNT(t_bike.id) AS uteryany
+                FROM
+                    t_bike
+                WHERE t_bike.error_status = 6 
+                AND t_bike.bike_type = 2 
+                GROUP BY
+                    t_bike.city_id, t_bike.error_status, t_bike.model
+            ),
+            v_ozhidanii_activacii AS (
+                SELECT
+                    t_bike.city_id,
+                    t_bike.error_status,
+                    t_bike.model,
+                    COUNT(t_bike.id) AS v_ozhidanii_activacii
+                FROM
+                    t_bike
+                WHERE t_bike.error_status = 4 
+                AND t_bike.bike_type = 2 
+                GROUP BY
+                    t_bike.city_id, t_bike.error_status, t_bike.model
+            ),
+            slugebnyi_transport AS (
+                SELECT
+                    t_bike.city_id,
+                    t_bike.error_status,
+                    t_bike.model,
+                    COUNT(t_bike.id) AS slugebnyi_transport
+                FROM
+                    t_bike
+                WHERE t_bike.error_status = 8 
+                AND t_bike.bike_type = 2  
+                GROUP BY
+                    t_bike.city_id, t_bike.error_status, t_bike.model
+            ),
+            remont AS (
+                SELECT
+                    t_bike.city_id,
+                    t_bike.error_status,
+                    t_bike.model,
+                    COUNT(t_bike.id) AS remont
+                FROM
+                    t_bike
+                WHERE t_bike.error_status = 5 
+                AND t_bike.bike_type = 2  
+                GROUP BY
+                    t_bike.city_id, t_bike.error_status, t_bike.model
+            ),
+            vyveden_iz_ekspluatacii AS (
+                SELECT
+                    t_bike.city_id,
+                    t_bike.error_status,
+                    t_bike.model,
+                    COUNT(t_bike.id) AS vyveden_iz_ekspluatacii
+                FROM
+                    t_bike
+                WHERE t_bike.error_status = 3 
+                AND t_bike.bike_type = 2 
+                GROUP BY
+                    t_bike.city_id, t_bike.error_status, t_bike.model
+            ),
+            mr_user AS (
+                SELECT
+                    t_bike.city_id,
+                    t_bike.error_status,
+                    t_bike.model,
+                    COUNT(t_bike.id) AS mr_user
+                FROM
+                    t_bike
+                WHERE t_bike.error_status = 2 
+                AND t_bike.bike_type = 2 
+                GROUP BY
+                    t_bike.city_id, t_bike.error_status, t_bike.model
+            ),
+            kvt AS (
+                SELECT
+                    t_bike.city_id,
+                    t_bike.model,
+                    COUNT(t_bike.id) AS kvt
+                FROM
+                    t_bike
+                WHERE
+                    TIMESTAMPDIFF(SECOND, FROM_UNIXTIME(t_bike.heart_time), NOW()) < 900
+                    AND t_bike.error_status IN (0, 7)
+                    AND t_bike.bike_type = 2
+                GROUP BY
+                    t_bike.city_id, t_bike.model
+                ORDER BY
+                    t_bike.city_id DESC
+            ),
+            kvt_offline AS (
+                SELECT
+                    t_bike.city_id,
+                    t_bike.model,
+                    COUNT(t_bike.id) AS kvt_offline
+                FROM
+                    t_bike
+                WHERE
+                    TIMESTAMPDIFF(SECOND, FROM_UNIXTIME(t_bike.heart_time), NOW()) >= 900
+                    AND t_bike.error_status IN (0, 7)
+                    AND t_bike.bike_type = 2
+                GROUP BY
+                    t_bike.city_id, t_bike.model
+                ORDER BY
+                    t_bike.city_id DESC
+            ),
+            mr_admin AS (
+                SELECT
+                    t_bike.city_id,
+                    t_bike.error_status,
+                    t_bike.model,
+                    COUNT(t_bike.id) AS mr_admin
+                FROM
+                    t_bike
+                WHERE t_bike.error_status = 1 
+                AND t_bike.bike_type = 2 
+                GROUP BY
+                    t_bike.city_id, t_bike.error_status, t_bike.model
+            ),
+            donory AS (
+                SELECT
+                    CASE 
+                        WHEN t_bike.city_id = 1 THEN 11
+                    END AS city_id , 
+                    t_bike.model,
+                    COUNT(t_bike.id) AS donory
+                FROM
+                    t_bike
+                WHERE t_bike.error_status = 3 
+                    AND t_bike.bike_type = 2 
+                    AND t_bike.city_id = 1
+                GROUP BY
+                    t_bike.city_id, t_bike.model
+            ),
+            samokaty_v_puti AS (
+                SELECT
+                    CASE 
+                        WHEN t_bike.city_id = 6 THEN 11
+                    END AS city_id , 
+                    t_bike.model,
+                    COUNT(t_bike.id) AS samokaty_v_puti
+                FROM
+                    t_bike
+                WHERE t_bike.error_status IN (3, 5) 
+                    AND t_bike.bike_type = 2 
+                    AND t_bike.city_id = 6
+                GROUP BY
+                    t_bike.city_id, t_bike.model
+            )
             SELECT
-                t_bike.city_id,
-                t_bike.error_status,
-                t_bike.model,
-                COUNT(t_bike.id) AS uteryany
-            FROM
-                t_bike
-            WHERE t_bike.error_status = 6 
-            AND t_bike.bike_type = 2 
-            -- AND t_bike.city_id IN (11,12)
-            -- AND t_bike.model LIKE '%freego%'
-            GROUP BY
-                t_bike.city_id, t_bike.error_status, t_bike.model
-        ),
-        v_ozhidanii_activacii AS (
-            SELECT
-                t_bike.city_id,
-                t_bike.error_status,
-                t_bike.model,
-                COUNT(t_bike.id) AS v_ozhidanii_activacii
-            FROM
-                t_bike
-            WHERE t_bike.error_status = 4 
-            AND t_bike.bike_type = 2 
-            -- AND t_bike.city_id IN (11,12)
-            -- AND t_bike.model LIKE '%freego%'
-            GROUP BY
-                t_bike.city_id, t_bike.error_status, t_bike.model
-        ),
-        slugebnyi_transport AS (
-            SELECT
-                t_bike.city_id,
-                t_bike.error_status,
-                t_bike.model,
-                COUNT(t_bike.id) AS slugebnyi_transport
-            FROM
-                t_bike
-            WHERE t_bike.error_status = 8 
-            AND t_bike.bike_type = 2  
-            -- AND t_bike.city_id IN (11,12)
-            -- AND t_bike.model LIKE '%freego%'
-            GROUP BY
-                t_bike.city_id, t_bike.error_status, t_bike.model
-        ),
-        remont AS (
-            SELECT
-                t_bike.city_id,
-                t_bike.error_status,
-                t_bike.model,
-                COUNT(t_bike.id) AS remont
-            FROM
-                t_bike
-            WHERE t_bike.error_status = 5 
-            AND t_bike.bike_type = 2  
-            -- AND t_bike.city_id IN (11,12)
-            -- AND t_bike.model LIKE '%freego%'
-            GROUP BY
-                t_bike.city_id, t_bike.error_status, t_bike.model
-        ),
-        vyveden_iz_ekspluatacii AS (
-            SELECT
-                t_bike.city_id,
-                t_bike.error_status,
-                t_bike.model,
-                COUNT(t_bike.id) AS vyveden_iz_ekspluatacii
-            FROM
-                t_bike
-            WHERE t_bike.error_status = 3 
-            AND t_bike.bike_type = 2 
-            -- AND t_bike.city_id IN (11,12) 
-            -- AND t_bike.model LIKE '%freego%'
-            GROUP BY
-                t_bike.city_id, t_bike.error_status, t_bike.model
-        ),
-        mr_user AS (
-            SELECT
-                t_bike.city_id,
-                t_bike.error_status,
-                t_bike.model,
-                COUNT(t_bike.id) AS mr_user
-            FROM
-                t_bike
-            WHERE t_bike.error_status = 2 
-            AND t_bike.bike_type = 2 
-            -- AND t_bike.city_id IN (11,12) 
-            -- AND t_bike.model LIKE '%freego%'
-            GROUP BY
-                t_bike.city_id, t_bike.error_status, t_bike.model
-        ),
-        kvt AS (
-            SELECT
-                t_bike.city_id,
-                t_bike.model,
-                COUNT(t_bike.id) AS kvt
-            FROM
-                t_bike
-            WHERE
-                TIMESTAMPDIFF(SECOND, FROM_UNIXTIME(t_bike.heart_time), NOW()) < 900
-                AND t_bike.error_status IN (0, 7)
-                AND t_bike.bike_type = 2
-                -- AND t_bike.model LIKE '%freego%' 
-                -- AND t_bike.city_id IN (11,12)
-            GROUP BY
-                t_bike.city_id, t_bike.model
-            ORDER BY
-                t_bike.city_id DESC
-        ),
-        kvt_offline AS (
-            SELECT
-                t_bike.city_id,
-                t_bike.model,
-                COUNT(t_bike.id) AS kvt_offline
-            FROM
-                t_bike
-            WHERE
-                TIMESTAMPDIFF(SECOND, FROM_UNIXTIME(t_bike.heart_time), NOW()) >= 900
-                AND t_bike.error_status IN (0, 7)
-                AND t_bike.bike_type = 2
-                -- AND t_bike.model LIKE '%freego%' 
-                -- AND t_bike.city_id IN (11,12)
-            GROUP BY
-                t_bike.city_id, t_bike.model
-            ORDER BY
-                t_bike.city_id DESC
-        ),
-        mr_admin AS (
-            SELECT
-                t_bike.city_id,
-                t_bike.error_status,
-                t_bike.model,
-                COUNT(t_bike.id) AS mr_admin
-            FROM
-                t_bike
-            WHERE t_bike.error_status = 1 
-            AND t_bike.bike_type = 2 
-            -- AND t_bike.model LIKE '%freego%' 
-            -- AND t_bike.city_id IN (11,12)
-            GROUP BY
-                t_bike.city_id, t_bike.error_status, t_bike.model
-        )
-        SELECT
-            t_city_sklady.id AS city_id,
-            t_city_sklady.name,
-            t_city_sklady.model,
-            COALESCE(uteryany.uteryany,0) AS uteryany,
-            COALESCE(v_ozhidanii_activacii.v_ozhidanii_activacii,0) AS v_ozhidanii_activacii,
-            COALESCE(slugebnyi_transport.slugebnyi_transport,0) AS slugebnyi_transport,
-            COALESCE(remont.remont,0) AS remont,
-            COALESCE(vyveden_iz_ekspluatacii.vyveden_iz_ekspluatacii,0) AS vyveden_iz_ekspluatacii,
-            COALESCE(mr_user.mr_user,0) AS mr_user,
-            COALESCE(kvt.kvt,0) AS kvt,
-            COALESCE(mr_admin.mr_admin,0) AS mr_admin,
-            COALESCE(mr_admin.mr_admin,0) + COALESCE(kvt.kvt,0) + COALESCE(kvt_offline.kvt_offline,0) AS fact_park,
-            COALESCE(v_ozhidanii_activacii.v_ozhidanii_activacii,0) + COALESCE(slugebnyi_transport.slugebnyi_transport,0) + COALESCE(remont.remont,0) + COALESCE(vyveden_iz_ekspluatacii.vyveden_iz_ekspluatacii,0) + COALESCE(mr_user.mr_user,0) + COALESCE(kvt.kvt,0) + COALESCE(mr_admin.mr_admin,0) + COALESCE(kvt_offline.kvt_offline,0) AS itogo_sim_for_stocks,
-            COALESCE(uteryany.uteryany,0) + COALESCE(v_ozhidanii_activacii.v_ozhidanii_activacii,0) + COALESCE(slugebnyi_transport.slugebnyi_transport,0) + COALESCE(remont.remont,0) + COALESCE(vyveden_iz_ekspluatacii.vyveden_iz_ekspluatacii,0) + COALESCE(mr_user.mr_user,0) + COALESCE(kvt.kvt,0) + COALESCE(mr_admin.mr_admin,0) + COALESCE(kvt_offline.kvt_offline,0) AS itogo_sim_for_city,
-            COALESCE(kvt_offline.kvt_offline,0) AS kvt_offline
-        FROM t_city_sklady
-        LEFT JOIN uteryany ON t_city_sklady.id = uteryany.city_id AND t_city_sklady.model = uteryany.model
-        LEFT JOIN v_ozhidanii_activacii ON t_city_sklady.id = v_ozhidanii_activacii.city_id AND t_city_sklady.model = v_ozhidanii_activacii.model
-        LEFT JOIN slugebnyi_transport ON t_city_sklady.id = slugebnyi_transport.city_id AND t_city_sklady.model = slugebnyi_transport.model
-        LEFT JOIN remont ON t_city_sklady.id = remont.city_id AND t_city_sklady.model = remont.model
-        LEFT JOIN vyveden_iz_ekspluatacii ON t_city_sklady.id = vyveden_iz_ekspluatacii.city_id AND t_city_sklady.model = vyveden_iz_ekspluatacii.model
-        LEFT JOIN mr_user ON t_city_sklady.id = mr_user.city_id AND t_city_sklady.model = mr_user.model
-        LEFT JOIN kvt ON t_city_sklady.id = kvt.city_id AND t_city_sklady.model = kvt.model
-        LEFT JOIN kvt_offline ON t_city_sklady.id = kvt_offline.city_id AND t_city_sklady.model = kvt_offline.model
-        LEFT JOIN mr_admin ON t_city_sklady.id = mr_admin.city_id AND t_city_sklady.model = mr_admin.model
-        ORDER BY t_city_sklady.id DESC
-        '''
+                t_city_sklady.id AS city_id,
+                t_city_sklady.name,
+                t_city_sklady.model,
+                COALESCE(uteryany.uteryany,0) AS uteryany,
+                COALESCE(v_ozhidanii_activacii.v_ozhidanii_activacii,0) AS v_ozhidanii_activacii,
+                COALESCE(slugebnyi_transport.slugebnyi_transport,0) AS slugebnyi_transport,
+                COALESCE(remont.remont,0) AS remont,
+                COALESCE(vyveden_iz_ekspluatacii.vyveden_iz_ekspluatacii,0) AS vyveden_iz_ekspluatacii,
+                COALESCE(mr_user.mr_user,0) AS mr_user,
+                COALESCE(kvt.kvt,0) AS kvt,
+                COALESCE(mr_admin.mr_admin,0) AS mr_admin,
+                COALESCE(mr_admin.mr_admin,0) + COALESCE(kvt.kvt,0) + COALESCE(kvt_offline.kvt_offline,0) AS fact_park,
+                COALESCE(v_ozhidanii_activacii.v_ozhidanii_activacii,0) + COALESCE(slugebnyi_transport.slugebnyi_transport,0) + COALESCE(remont.remont,0) + COALESCE(vyveden_iz_ekspluatacii.vyveden_iz_ekspluatacii,0) + COALESCE(mr_user.mr_user,0) + COALESCE(kvt.kvt,0) + COALESCE(mr_admin.mr_admin,0) + COALESCE(kvt_offline.kvt_offline,0) AS itogo_sim_for_stocks,
+                COALESCE(uteryany.uteryany,0) + COALESCE(v_ozhidanii_activacii.v_ozhidanii_activacii,0) + COALESCE(slugebnyi_transport.slugebnyi_transport,0) + COALESCE(remont.remont,0) + COALESCE(vyveden_iz_ekspluatacii.vyveden_iz_ekspluatacii,0) + COALESCE(mr_user.mr_user,0) + COALESCE(kvt.kvt,0) + COALESCE(mr_admin.mr_admin,0) + COALESCE(kvt_offline.kvt_offline,0) AS itogo_sim_for_city,
+                COALESCE(kvt_offline.kvt_offline,0) AS kvt_offline,
+                COALESCE(donory.donory,0) AS donory,
+                COALESCE(samokaty_v_puti.samokaty_v_puti,0) AS samokaty_v_puti
+            FROM t_city_sklady
+            LEFT JOIN uteryany ON t_city_sklady.id = uteryany.city_id AND t_city_sklady.model = uteryany.model
+            LEFT JOIN v_ozhidanii_activacii ON t_city_sklady.id = v_ozhidanii_activacii.city_id AND t_city_sklady.model = v_ozhidanii_activacii.model
+            LEFT JOIN slugebnyi_transport ON t_city_sklady.id = slugebnyi_transport.city_id AND t_city_sklady.model = slugebnyi_transport.model
+            LEFT JOIN remont ON t_city_sklady.id = remont.city_id AND t_city_sklady.model = remont.model
+            LEFT JOIN vyveden_iz_ekspluatacii ON t_city_sklady.id = vyveden_iz_ekspluatacii.city_id AND t_city_sklady.model = vyveden_iz_ekspluatacii.model
+            LEFT JOIN mr_user ON t_city_sklady.id = mr_user.city_id AND t_city_sklady.model = mr_user.model
+            LEFT JOIN kvt ON t_city_sklady.id = kvt.city_id AND t_city_sklady.model = kvt.model
+            LEFT JOIN kvt_offline ON t_city_sklady.id = kvt_offline.city_id AND t_city_sklady.model = kvt_offline.model
+            LEFT JOIN mr_admin ON t_city_sklady.id = mr_admin.city_id AND t_city_sklady.model = mr_admin.model
+            LEFT JOIN donory ON t_city_sklady.id = donory.city_id AND t_city_sklady.model = donory.model
+            LEFT JOIN samokaty_v_puti ON t_city_sklady.id = samokaty_v_puti.city_id AND t_city_sklady.model = samokaty_v_puti.model
+            ORDER BY t_city_sklady.id DESC
+            '''
 
         df1_all = pd.read_sql(select_df1_all, engine_mysql)
-        df1_all = df1_all.loc[df1_all['city_id'].isin([13, 15, 18, 16, 17, 19, 20, 21, 22, 25, 12, 11, 28, 29, 14, 32, 31])]
-        df1_rabota = df1_all.loc[df1_all['city_id'].isin([13, 15, 18, 16, 17, 19, 20, 21, 22, 25, 28, 29, 14, 32, 31])]
+
+        list_cities = [13, 15, 18, 16, 17, 19, 20, 21, 22, 25, 28, 29, 14, 32, 31]
+        list_stocks = [11, 12]
+
+        df1_all = df1_all.loc[df1_all['city_id'].isin(list_cities + list_stocks)]
+        df1_rabota = df1_all.loc[df1_all['city_id'].isin(list_cities)]
+
         df1_rabota_itog = df1_rabota.groupby(['city_id', 'name'], as_index=False) \
             .agg({'uteryany': 'sum',
                   'v_ozhidanii_activacii': 'sum',
@@ -1093,12 +1118,15 @@ def main():
                   'itogo_sim_for_stocks': 'sum',
                   'itogo_sim_for_city': 'sum',
                   'kvt_offline': 'sum'})
-        df1_sklady = df1_all.loc[df1_all['city_id'].isin([11, 12])].copy()
+
+        df1_sklady = df1_all.loc[df1_all['city_id'].isin(list_stocks)].copy()
         df1_sklady_temp = df1_sklady.fillna('empty').replace('', 'empty')
         df1_sklady_temp_1 = df1_sklady_temp[df1_sklady_temp['model'].str.contains('freego')].copy()
         df1_sklady_temp_1['name'] = df1_sklady_temp_1['name'] + '_' + df1_sklady_temp_1['model']
         df1_sklady_temp_1 = df1_sklady_temp_1.drop('model', axis=1)
+
         df1 = pd.concat([df1_rabota_itog, df1_sklady_temp_1], axis=0)
+        df1 = df1.fillna(0)
 
         select_df2 = '''
             SELECT
@@ -1115,13 +1143,7 @@ def main():
                 AND vni_cities_for_graph."date" > DATE(TO_CHAR(current_date - interval '8' DAY, 'YYYY-mm-dd'))
             GROUP BY vni_cities_for_graph.id, vni_cities_for_graph."name"
         '''
-
         df2 = pd.read_sql(select_df2, engine_postgresql).fillna(0)
-
-        google_service_account_json = get_google_creds()
-        with open('google_json.json', 'w') as fp:
-            json.dump(json.loads(google_service_account_json, strict=False), fp)
-        generated_json_file = './google_json.json'
 
         SERVICE_ACCOUNT_FILE = './google_json.json'
         SPREADSHEET_ID = '1BMH_HSxmK33SZvv3cIAH_SIgvm2NncSTTKI1aa7CoG8'
@@ -1129,20 +1151,22 @@ def main():
         service_account_file = generated_json_file
         sheets_service = get_sheets_service(SERVICE_ACCOUNT_FILE)
         df3 = read_sheet_data_to_pandas(sheets_service, SPREADSHEET_ID, RANGE_NAME)
+
         df3 = df3.replace('', '0')
         df3['city_id'] = df3['city_id'].astype(int)
         df3['planovoye'] = df3['planovoye'].fillna('0').replace('', '0').astype(int)
-        df3['Batteries V4.6'] = df3['Batteries V4.6'].fillna('0').replace('', '0').astype(int)
+        df3['Batteries V4.6/V4.7'] = df3['Batteries V4.6/V4.7'].fillna('0').replace('', '0').astype(int)
         df3['Batteries numbers V3 PRO'] = df3['Batteries numbers V3 PRO'].fillna('0').replace('', '0').astype(int)
 
         # Соединяю данные для окончательного расчета
         df = df1.merge(df2[['city_id', 'poezdok_7day', 'kvt_7day', 'akb_na_park', 'akb_na_park_percent']], on='city_id',
                        how='left') \
-            .merge(df3[['city_id', 'planovoye', 'Batteries V4.6', 'Batteries numbers V3 PRO']], on='city_id', how='left') \
+            .merge(df3[['city_id', 'planovoye', 'Batteries V4.6/V4.7', 'Batteries numbers V3 PRO']], on='city_id',
+                   how='left') \
             .fillna(0)
 
         df.fillna(0, inplace=True)
-        df['svobodnyh_akb'] = df['Batteries V4.6'] + df['Batteries numbers V3 PRO']
+        df['svobodnyh_akb'] = 0
         df['skolko_nugno_akb'] = df['planovoye'] * df['akb_na_park_percent']
         df['skolko_dovesti_sim'] = df['planovoye'] - df['fact_park']
         df['skolko_dovesti_akb'] = df['skolko_nugno_akb'] - df['svobodnyh_akb']
@@ -1150,42 +1174,39 @@ def main():
 
         df_temp = df.copy()
         df_temp['planovoye'] = df_temp['planovoye'].astype(int)
-        df_temp['planovoye'] = df_temp['planovoye'].astype(int)
-
         df = df_temp.copy()
 
         select_spisannye = '''
-            SELECT
-                spisannye.name,
-                SUM(spisannye.spisannye) AS spisannye
-            FROM 
-                (SELECT
-                    CASE spisannye.user_group_id WHEN 5 THEN 'Kastoria_freego v3pro' WHEN 6 THEN 'Kastoria_freego v.4.6.' END AS name,
-                    spisannye.spisannye
+                SELECT
+                    spisannye.name,
+                    SUM(spisannye.spisannye) AS spisannye
                 FROM 
                     (SELECT
-                        t_bike.city_id,
-                        t_bike.model,
-                        t_bike.user_group_id,
+                        CASE spisannye.user_group_id WHEN 5 THEN 'Kastoria_freego v3pro' WHEN 6 THEN 'Kastoria_freego v.4.6.' END AS name,
+                        spisannye.spisannye
+                    FROM 
+                        (SELECT
+                            t_bike.city_id,
+                            t_bike.model,
+                            t_bike.user_group_id,
+                            COUNT(t_bike.id) AS spisannye
+                        FROM t_bike
+                        WHERE t_bike.user_group_id IS NOT NULL
+                        GROUP BY t_bike.city_id, t_bike.model, t_bike.user_group_id
+                        ) AS spisannye) AS spisannye
+                GROUP BY spisannye.name
+                UNION 
+                SELECT
+                    CASE total.name WHEN '' THEN 'Total' END AS name,
+                    total.spisannye
+                FROM 
+                    (SELECT
+                        t_bike.model AS name,
                         COUNT(t_bike.id) AS spisannye
                     FROM t_bike
-                    WHERE t_bike.user_group_id IS NOT NULL
-                    GROUP BY t_bike.city_id, t_bike.model, t_bike.user_group_id
-                    ) AS spisannye) AS spisannye
-            GROUP BY spisannye.name
-            UNION 
-            SELECT
-                CASE total.name WHEN '' THEN 'Total' END AS name,
-                total.spisannye
-            FROM 
-                (SELECT
-                    t_bike.model AS name,
-                    COUNT(t_bike.id) AS spisannye
-                FROM t_bike
-                WHERE t_bike.user_group_id IS NOT NULL 
-                    GROUP BY t_bike.model) AS total
-        '''
-
+                    WHERE t_bike.user_group_id IS NOT NULL 
+                        GROUP BY t_bike.model) AS total
+            '''
         df_spisannye = pd.read_sql(select_spisannye, engine_mysql)
 
         df = df.merge(df_spisannye[['name', 'spisannye']], how='left', on='name')
@@ -1193,25 +1214,49 @@ def main():
 
         df['itogo_sim_for_stocks'] = df['spisannye'] + df['v_ozhidanii_activacii'] + df['slugebnyi_transport'] + df[
             'remont'] + df['vyveden_iz_ekspluatacii'] + df['mr_user'] + df['kvt'] + df['mr_admin'] + df['kvt_offline']
-        df['itogo_sim_for_city'] = df['uteryany'] + df['v_ozhidanii_activacii'] + df['slugebnyi_transport'] + df['remont'] + df[
-            'vyveden_iz_ekspluatacii'] + df['mr_user'] + df['kvt'] + df['mr_admin'] + df['kvt_offline']
-        df = df.iloc[:, [25, 0, 1, 2, 3, 4, 5, 6, 7, 8, 13, 9, 10, 26, 18, 21, 22, 17, 23, 24, 12, 11]]
-
-        df.loc[(df['city_id'] == 12) & (df['name'] == 'Argos Orestiko_freego v3pro'), 'svobodnyh_akb'] = int(
-            df3.loc[df3['city_name'] == 'Аргос (склад Волоса)', 'Batteries numbers V3 PRO'].iloc[0])
-        df.loc[(df['city_id'] == 12) & (df['name'] == 'Argos Orestiko_freego v.4.6.'), 'svobodnyh_akb'] = int(
-            df3.loc[df3['city_name'] == 'Аргос (склад Волоса)', 'Batteries V4.6'].iloc[0])
+        df['itogo_sim_for_city'] = df['uteryany'] + df['v_ozhidanii_activacii'] + df['slugebnyi_transport'] + df[
+            'remont'] + df['vyveden_iz_ekspluatacii'] + df['mr_user'] + df['kvt'] + df['mr_admin'] + df['kvt_offline']
+        df = df[['timestamp',
+                 'city_id',
+                 'name',
+                 'uteryany',
+                 'v_ozhidanii_activacii',
+                 'slugebnyi_transport',
+                 'remont',
+                 'vyveden_iz_ekspluatacii',
+                 'mr_user',
+                 'kvt',
+                 'kvt_offline',
+                 'mr_admin',
+                 'fact_park',
+                 'itogo_sim_for_stocks',
+                 'itogo_sim_for_city',
+                 'planovoye',
+                 'svobodnyh_akb',
+                 'skolko_nugno_akb',
+                 'akb_na_park_percent',
+                 'skolko_dovesti_sim',
+                 'skolko_dovesti_akb',
+                 'spisannye',
+                 'donory',
+                 'samokaty_v_puti']]
+        df.loc[(df['city_id'] == 12) & (df['name'] == 'Argos Orestiko_freego v3pro'), 'svobodnyh_akb'] = 0
+        df.loc[(df['city_id'] == 12) & (df['name'] == 'Argos Orestiko_freego v.4.6.'), 'svobodnyh_akb'] = 0
         df.loc[(df['city_id'] == 11) & (df['name'] == 'Kastoria_freego v3pro'), 'svobodnyh_akb'] = int(
             df3.loc[df3['city_name'] == 'Кастория (склад)', 'Batteries numbers V3 PRO'].iloc[0])
         df.loc[(df['city_id'] == 11) & (df['name'] == 'Kastoria_freego v.4.6.'), 'svobodnyh_akb'] = int(
-            df3.loc[df3['city_name'] == 'Кастория (склад)', 'Batteries V4.6'].iloc[0])
-
+            df3.loc[df3['city_name'] == 'Кастория (склад)', 'Batteries V4.6/V4.7'].iloc[0])
+        df.loc[(df['city_id'] == 11) & (df['name'] == 'Kastoria_freego v.4.7.'), 'svobodnyh_akb'] = int(
+            df3.loc[df3['city_name'] == 'Кастория (склад)', 'Batteries V4.6/V4.7'].iloc[0])
         df = df.replace('Argos Orestiko_freego v3pro', 'Малый склад_v3pro') \
             .replace('Argos Orestiko_freego v.4.6.', 'Малый склад_v.4.6') \
+            .replace('Argos Orestiko_freego v.4.7.', 'Малый склад_v.4.7') \
             .replace('Kastoria_freego v3pro', 'Главный склад_v3pro') \
-            .replace('Kastoria_freego v.4.6.', 'Главный склад_v.4.6')
+            .replace('Kastoria_freego v.4.6.', 'Главный склад_v.4.6') \
+            .replace('Kastoria_freego v.4.7.', 'Главный склад_v.4.7')
 
-        df_cities = df.loc[df['city_id'].isin([13, 15, 18, 16, 17, 19, 20, 21, 22, 25, 28, 29, 14, 32, 31])]
+        df_cities = df.loc[df['city_id'].isin(list_cities)]
+
         total_row_work = {
             'timestamp': [pd.Timestamp.now() + pd.Timedelta(hours=3)],
             'city_id': [100],
@@ -1234,12 +1279,14 @@ def main():
             'skolko_dovesti_akb': [df_cities['skolko_dovesti_akb'].sum()],
             'itogo_sim_for_city': [df_cities['itogo_sim_for_city'].sum()],
             'spisannye': [df_cities['spisannye'].sum()],
-            'itogo_sim_for_stocks': [df_cities['itogo_sim_for_stocks'].sum()]
+            'itogo_sim_for_stocks': [df_cities['itogo_sim_for_stocks'].sum()],
+            'donory': [df_cities['donory'].sum()],
+            'samokaty_v_puti': [df_cities['samokaty_v_puti'].sum()]
         }
 
         df = pd.concat([df, pd.DataFrame.from_dict(total_row_work)])
 
-        df_sklady = df.loc[df['city_id'].isin([11, 12])]
+        df_sklady = df.loc[df['city_id'].isin(list_stocks)]
 
         total_row_sklady = {
             'timestamp': [pd.Timestamp.now() + pd.Timedelta(hours=3)],
@@ -1263,9 +1310,10 @@ def main():
             'skolko_dovesti_akb': [df_sklady['skolko_dovesti_akb'].sum()],
             'itogo_sim_for_city': [df_sklady['itogo_sim_for_city'].sum()],
             'spisannye': [df_sklady['spisannye'].sum()],
-            'itogo_sim_for_stocks': [df_sklady['itogo_sim_for_stocks'].sum()]
+            'itogo_sim_for_stocks': [df_sklady['itogo_sim_for_stocks'].sum()],
+            'donory': [df_sklady['donory'].sum()],
+            'samokaty_v_puti': [df_sklady['samokaty_v_puti'].sum()]
         }
-
         df = pd.concat([df, pd.DataFrame.from_dict(total_row_sklady)])
         df['timestamp'] = pd.Timestamp.now() + pd.Timedelta(hours=3)
 
@@ -1278,108 +1326,117 @@ def main():
         df.to_sql("akb_cities_and_stocks", engine_postgresql, if_exists="append", index=False)
         print('akb_cities_and_stocks UPDATED!')
 
+
         # # # АКБ - конец
     except Exception as e:
         print(f"Произошла ошибка в АКБ: {e}")
         pass
 
-    # АКБ с красными столбцами Начало
-    select_akb_cities_and_stocks_result = '''
-        SELECT *
-        FROM 
-            (SELECT
-                raw.update_timestamp ,
-                -- raw."name" ,
-                -- raw."timestamp" ,
-                raw.slomali ,
-                raw.pochinili ,
-                -- raw.pribylo_vybylo_goroda + raw.slomali  - LAG(raw.slomali) OVER (PARTITION BY raw.city_id, raw."name" ORDER BY raw.day_) AS pribylo_vybylo_goroda,
-                raw.pribylo_vybylo_goroda,
-                -- COALESCE(raw.pribylo_vybylo_sklady,0) + COALESCE(raw.pochinili,0) - COALESCE(LAG(raw.pochinili) OVER (PARTITION BY raw.city_id, raw."name" ORDER BY raw.day_),0) AS pribylo_vybylo_sklady,
-                raw.pribylo_vybylo_sklady,
-                raw.remont_posledniy_pred ,
-                raw.vyveden_iz_ekspluatacii_posledniy_pred ,
-                raw.v_ozhidanii_activacii_posledniy_pred ,
-                raw.slugebnyi_transport_posledniy_pred ,
-                raw.itogo_sim_for_city_posledniy_pred ,
-                raw.itogo_sim_for_stocks_posledniy_pred ,
-                raw."rank" ,
-                raw.day_ ,
-                raw.remont_posledniy ,
-                raw.vyveden_iz_ekspluatacii_posledniy ,
-                raw.v_ozhidanii_activacii_posledniy ,
-                raw.slugebnyi_transport_posledniy ,
-                raw.itogo_sim_for_city_posledniy ,
-                raw.itogo_sim_for_stocks_posledniy ,
-                raw."timestamp" ,
-                raw.city_id ,
-                raw."name" ,
-                raw.uteryany ,
-                raw.v_ozhidanii_activacii ,
-                raw.slugebnyi_transport ,
-                raw.remont,
-                raw.vyveden_iz_ekspluatacii ,
-                raw.mr_user ,
-                raw.kvt,
-                raw.kvt_offline ,
-                raw.mr_admin ,
-                raw.fact_park ,
-                raw.spisannye ,
-                raw.planovoye ,
-                raw.svobodnyh_akb ,
-                raw.skolko_nugno_akb ,
-                raw.akb_na_park_percent ,
-                raw.skolko_dovesti_sim ,
-                raw.skolko_dovesti_akb ,
-                raw.itogo_sim_for_city ,
-                raw.itogo_sim_for_stocks
-            FROM 
-                (SELECT
-                    NOW() AS update_timestamp,
-                    res.remont_posledniy - res.remont_posledniy_pred - (res.vyveden_iz_ekspluatacii_posledniy - res.vyveden_iz_ekspluatacii_posledniy_pred) AS slomali,
-                    res.v_ozhidanii_activacii_posledniy - res.v_ozhidanii_activacii_posledniy_pred + res.slugebnyi_transport_posledniy - res.slugebnyi_transport_posledniy_pred AS pochinili,
-                    res.itogo_sim_for_city_posledniy - res.itogo_sim_for_city_posledniy_pred AS pribylo_vybylo_goroda,
-                    res.itogo_sim_for_stocks_posledniy - res.itogo_sim_for_stocks_posledniy_pred AS pribylo_vybylo_sklady,
-                    res.*
+    try:
+        # АКБ с красными столбцами Начало
+        select_akb_cities_and_stocks_result = '''
+            SELECT *
                 FROM 
                     (SELECT
-                        LAG(ranked.remont_posledniy) OVER (PARTITION BY ranked.city_id, ranked."name" ORDER BY ranked.day_) AS remont_posledniy_pred,
-                        LAG(ranked.vyveden_iz_ekspluatacii_posledniy) OVER (PARTITION BY ranked.city_id, ranked."name" ORDER BY ranked.day_) AS vyveden_iz_ekspluatacii_posledniy_pred,
-                        LAG(ranked.v_ozhidanii_activacii_posledniy) OVER (PARTITION BY ranked.city_id, ranked."name" ORDER BY ranked.day_) AS v_ozhidanii_activacii_posledniy_pred,
-                        LAG(ranked.slugebnyi_transport_posledniy) OVER (PARTITION BY ranked.city_id, ranked."name" ORDER BY ranked.day_) AS slugebnyi_transport_posledniy_pred,
-                        LAG(ranked.itogo_sim_for_city_posledniy) OVER (PARTITION BY ranked.city_id, ranked."name" ORDER BY ranked.day_) AS itogo_sim_for_city_posledniy_pred,
-                        LAG(ranked.itogo_sim_for_stocks_posledniy) OVER (PARTITION BY ranked.city_id, ranked."name" ORDER BY ranked.day_) AS itogo_sim_for_stocks_posledniy_pred,
-                        ranked.*
+                        raw.update_timestamp ,
+                        -- raw."name" ,
+                    -- raw."timestamp" ,
+                    raw.slomali ,
+                    raw.pochinili ,
+                    -- raw.pribylo_vybylo_goroda + raw.slomali  - LAG(raw.slomali) OVER (PARTITION BY raw.city_id, raw."name" ORDER BY raw.day_) AS pribylo_vybylo_goroda,
+                    raw.pribylo_vybylo_goroda,
+                    -- COALESCE(raw.pribylo_vybylo_sklady,0) + COALESCE(raw.pochinili,0) - COALESCE(LAG(raw.pochinili) OVER (PARTITION BY raw.city_id, raw."name" ORDER BY raw.day_),0) AS pribylo_vybylo_sklady,
+                    raw.pribylo_vybylo_sklady,
+                    raw.remont_posledniy_pred ,
+                    raw.vyveden_iz_ekspluatacii_posledniy_pred ,
+                    raw.v_ozhidanii_activacii_posledniy_pred ,
+                    raw.slugebnyi_transport_posledniy_pred ,
+                    raw.itogo_sim_for_city_posledniy_pred ,
+                    raw.itogo_sim_for_stocks_posledniy_pred ,
+                    raw."rank" ,
+                    raw.day_ ,
+                    raw.remont_posledniy ,
+                    raw.vyveden_iz_ekspluatacii_posledniy ,
+                    raw.v_ozhidanii_activacii_posledniy ,
+                    raw.slugebnyi_transport_posledniy ,
+                    raw.itogo_sim_for_city_posledniy ,
+                    raw.itogo_sim_for_stocks_posledniy ,
+                    raw."timestamp" ,
+                    raw.city_id ,
+                    raw."name" ,
+                    raw.uteryany ,
+                    raw.v_ozhidanii_activacii ,
+                    raw.slugebnyi_transport ,
+                    raw.remont,
+                    raw.vyveden_iz_ekspluatacii ,
+                    raw.mr_user ,
+                    raw.kvt,
+                    raw.kvt_offline ,
+                    raw.mr_admin ,
+                    raw.fact_park ,
+                    raw.spisannye ,
+                    raw.planovoye ,
+                    raw.svobodnyh_akb ,
+                    raw.skolko_nugno_akb ,
+                    raw.akb_na_park_percent ,
+                    raw.skolko_dovesti_sim ,
+                    raw.skolko_dovesti_akb ,
+                    raw.itogo_sim_for_city ,
+                    raw.itogo_sim_for_stocks,
+                    raw.donory ,
+                    raw.samokaty_v_puti 
+                FROM 
+                    (
+                    SELECT
+                        NOW() AS update_timestamp,
+                        res.remont_posledniy - res.remont_posledniy_pred - (res.vyveden_iz_ekspluatacii_posledniy - res.vyveden_iz_ekspluatacii_posledniy_pred) AS slomali,
+                        res.v_ozhidanii_activacii_posledniy - res.v_ozhidanii_activacii_posledniy_pred + res.slugebnyi_transport_posledniy - res.slugebnyi_transport_posledniy_pred AS pochinili,
+                        res.itogo_sim_for_city_posledniy - res.itogo_sim_for_city_posledniy_pred AS pribylo_vybylo_goroda,
+                        res.itogo_sim_for_stocks_posledniy - res.itogo_sim_for_stocks_posledniy_pred AS pribylo_vybylo_sklady,
+                        res.*
                     FROM 
                         (
-                        SELECT  
-                            RANK() OVER (PARTITION BY akb_cities_and_stocks.city_id, akb_cities_and_stocks."name", DATE(akb_cities_and_stocks."timestamp") ORDER BY akb_cities_and_stocks."timestamp" DESC) AS rank,
-                            DATE(akb_cities_and_stocks."timestamp") AS day_,
-                            FIRST_VALUE(akb_cities_and_stocks.remont) OVER (PARTITION BY akb_cities_and_stocks."name", DATE(akb_cities_and_stocks."timestamp") ORDER BY akb_cities_and_stocks."timestamp" DESC) AS remont_posledniy,
-                            FIRST_VALUE(akb_cities_and_stocks.vyveden_iz_ekspluatacii) OVER (PARTITION BY akb_cities_and_stocks."name", DATE(akb_cities_and_stocks."timestamp") ORDER BY akb_cities_and_stocks."timestamp" DESC) AS vyveden_iz_ekspluatacii_posledniy,
-                            FIRST_VALUE(akb_cities_and_stocks.v_ozhidanii_activacii) OVER (PARTITION BY akb_cities_and_stocks."name", DATE(akb_cities_and_stocks."timestamp") ORDER BY akb_cities_and_stocks."timestamp" DESC) AS v_ozhidanii_activacii_posledniy,
-                            FIRST_VALUE(akb_cities_and_stocks.slugebnyi_transport) OVER (PARTITION BY akb_cities_and_stocks."name", DATE(akb_cities_and_stocks."timestamp") ORDER BY akb_cities_and_stocks."timestamp" DESC) AS slugebnyi_transport_posledniy,
-                            FIRST_VALUE(akb_cities_and_stocks.itogo_sim_for_city) OVER (PARTITION BY akb_cities_and_stocks."name", DATE(akb_cities_and_stocks."timestamp") ORDER BY akb_cities_and_stocks."timestamp" DESC) AS itogo_sim_for_city_posledniy,
-                            FIRST_VALUE(akb_cities_and_stocks.itogo_sim_for_stocks) OVER (PARTITION BY akb_cities_and_stocks."name", DATE(akb_cities_and_stocks."timestamp") ORDER BY akb_cities_and_stocks."timestamp" DESC) AS itogo_sim_for_stocks_posledniy,
-                            akb_cities_and_stocks.*
-                        FROM akb_cities_and_stocks
-                        ORDER BY akb_cities_and_stocks."timestamp" DESC
-                        ) AS ranked
-                    WHERE ranked."rank" = 1 
-                    ORDER BY ranked.day_ DESC
-                            ) AS res 
-                        -- WHERE res.day_ = DATE(NOW())
-                        ) AS raw
-            -- WHERE raw.day_ = DATE(NOW())
-            ORDER BY raw."timestamp" DESC) AS res
-        WHERE res.day_ = DATE(NOW())
-    '''
-    df_akb_cities_and_stocks_result = pd.read_sql(select_akb_cities_and_stocks_result, engine_postgresql)
-    df_akb_cities_and_stocks_result.to_sql("akb_cities_and_stocks_result", engine_postgresql, if_exists="append",
-                                           index=False)
-    print('АКБ с красными столбцами UPDATED!')
+                        SELECT
+                            LAG(ranked.remont_posledniy) OVER (PARTITION BY ranked.city_id, ranked."name" ORDER BY ranked.day_) AS remont_posledniy_pred,
+                            LAG(ranked.vyveden_iz_ekspluatacii_posledniy) OVER (PARTITION BY ranked.city_id, ranked."name" ORDER BY ranked.day_) AS vyveden_iz_ekspluatacii_posledniy_pred,
+                            LAG(ranked.v_ozhidanii_activacii_posledniy) OVER (PARTITION BY ranked.city_id, ranked."name" ORDER BY ranked.day_) AS v_ozhidanii_activacii_posledniy_pred,
+                            LAG(ranked.slugebnyi_transport_posledniy) OVER (PARTITION BY ranked.city_id, ranked."name" ORDER BY ranked.day_) AS slugebnyi_transport_posledniy_pred,
+                            LAG(ranked.itogo_sim_for_city_posledniy) OVER (PARTITION BY ranked.city_id, ranked."name" ORDER BY ranked.day_) AS itogo_sim_for_city_posledniy_pred,
+                            LAG(ranked.itogo_sim_for_stocks_posledniy) OVER (PARTITION BY ranked.city_id, ranked."name" ORDER BY ranked.day_) AS itogo_sim_for_stocks_posledniy_pred,
+                            ranked.*
+                        FROM 
+                            (
+                            SELECT  
+                                RANK() OVER (PARTITION BY akb_cities_and_stocks.city_id, akb_cities_and_stocks."name", DATE(akb_cities_and_stocks."timestamp") ORDER BY akb_cities_and_stocks."timestamp" DESC) AS rank,
+                                DATE(akb_cities_and_stocks."timestamp") AS day_,
+                                FIRST_VALUE(akb_cities_and_stocks.remont) OVER (PARTITION BY akb_cities_and_stocks."name", DATE(akb_cities_and_stocks."timestamp") ORDER BY akb_cities_and_stocks."timestamp" DESC) AS remont_posledniy,
+                                FIRST_VALUE(akb_cities_and_stocks.vyveden_iz_ekspluatacii) OVER (PARTITION BY akb_cities_and_stocks."name", DATE(akb_cities_and_stocks."timestamp") ORDER BY akb_cities_and_stocks."timestamp" DESC) AS vyveden_iz_ekspluatacii_posledniy,
+                                FIRST_VALUE(akb_cities_and_stocks.v_ozhidanii_activacii) OVER (PARTITION BY akb_cities_and_stocks."name", DATE(akb_cities_and_stocks."timestamp") ORDER BY akb_cities_and_stocks."timestamp" DESC) AS v_ozhidanii_activacii_posledniy,
+                                FIRST_VALUE(akb_cities_and_stocks.slugebnyi_transport) OVER (PARTITION BY akb_cities_and_stocks."name", DATE(akb_cities_and_stocks."timestamp") ORDER BY akb_cities_and_stocks."timestamp" DESC) AS slugebnyi_transport_posledniy,
+                                FIRST_VALUE(akb_cities_and_stocks.itogo_sim_for_city) OVER (PARTITION BY akb_cities_and_stocks."name", DATE(akb_cities_and_stocks."timestamp") ORDER BY akb_cities_and_stocks."timestamp" DESC) AS itogo_sim_for_city_posledniy,
+                                FIRST_VALUE(akb_cities_and_stocks.itogo_sim_for_stocks) OVER (PARTITION BY akb_cities_and_stocks."name", DATE(akb_cities_and_stocks."timestamp") ORDER BY akb_cities_and_stocks."timestamp" DESC) AS itogo_sim_for_stocks_posledniy,
+                                akb_cities_and_stocks.*
+                            FROM akb_cities_and_stocks AS akb_cities_and_stocks
+                            ORDER BY akb_cities_and_stocks."timestamp" DESC
+                            ) AS ranked
+                        WHERE ranked."rank" = 1 
+                        ORDER BY ranked.day_ DESC
+                                ) AS res 
+                            -- WHERE res.day_ = DATE(NOW())
+                            ) AS raw
+                -- WHERE raw.day_ = DATE(NOW())
+                ORDER BY raw."timestamp" DESC) AS res
+            WHERE res.day_ = DATE(NOW())
+        '''
+        df_akb_cities_and_stocks_result = pd.read_sql(select_akb_cities_and_stocks_result, engine_postgresql)
+        df_akb_cities_and_stocks_result.to_sql("akb_cities_and_stocks_result", engine_postgresql, if_exists="append",
+                                               index=False)
+        print('АКБ с красными столбцами UPDATED!')
 
-    # АКБ с красными столбцами Конец
+        # АКБ с красными столбцами Конец
+    except Exception as e:
+        print(f"Произошла ошибка в АКБ с красными столбцами: {e}")
+        pass
 
     # Выгрузка t_bike_history Начало
     select_df_t_bike = '''
