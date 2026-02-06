@@ -1248,8 +1248,7 @@ def main():
             df3.loc[df3['city_name'] == 'Кастория (склад)', 'Batteries numbers V3 PRO'].iloc[0])
         df.loc[(df['city_id'] == 11) & (df['name'] == 'Kastoria_freego v.4.6.'), 'svobodnyh_akb'] = int(
             df3.loc[df3['city_name'] == 'Кастория (склад)', 'Batteries V4.6/V4.7'].iloc[0])
-        df.loc[(df['city_id'] == 11) & (df['name'] == 'Kastoria_freego v.4.7.'), 'svobodnyh_akb'] = int(
-            df3.loc[df3['city_name'] == 'Кастория (склад)', 'Batteries V4.6/V4.7'].iloc[0])
+        df.loc[(df['city_id'] == 11) & (df['name'] == 'Kastoria_freego v.4.7.'), 'svobodnyh_akb'] = 0
         df = df.replace('Argos Orestiko_freego v3pro', 'Малый склад_v3pro') \
             .replace('Argos Orestiko_freego v.4.6.', 'Малый склад_v.4.6') \
             .replace('Argos Orestiko_freego v.4.7.', 'Малый склад_v.4.7') \
