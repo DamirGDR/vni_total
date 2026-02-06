@@ -3102,8 +3102,8 @@ def main():
         SELECT 
             NOW() + INTERVAL '3 hours' AS add_time ,
             COALESCE(t_starts_res.city_id, t_ends_res.city_id) AS city_id ,
-            tap.area_id ,
-            tap.area_name ,
+            COALESCE(tap.area_id, 0) AS area_id ,
+            COALESCE(tap.area_name, '0') AS area_name ,
             COALESCE(t_starts_res.area , t_ends_res.area) AS parking_name ,
             COALESCE(t_starts_res.area_id , t_ends_res.area_id) AS parking_id ,
             COALESCE(t_ends_res.count_end_under_15m, 0) AS count_end_under_15m ,
