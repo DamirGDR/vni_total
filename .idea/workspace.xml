@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="coalesce в df_fresh_parking_stats1" />
+    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="'Плановое!A1:E18'">
+      <change beforePath="$PROJECT_DIR$/entrypoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/entrypoint.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -75,7 +77,14 @@
       <option name="project" value="LOCAL" />
       <updated>1770359986538</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="'Плановое!A1:E18'">
+      <created>1770372415374</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1770372415374</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="Vcs.Log.History.Properties">
@@ -105,6 +114,7 @@
     <MESSAGE value="Изменил: АКБ, АКБ красные столбцы, try/except в АКБ красные столбцы" />
     <MESSAGE value="Добавил try/except" />
     <MESSAGE value="coalesce в df_fresh_parking_stats1" />
-    <option name="LAST_COMMIT_MESSAGE" value="coalesce в df_fresh_parking_stats1" />
+    <MESSAGE value="'Плановое!A1:E18'" />
+    <option name="LAST_COMMIT_MESSAGE" value="'Плановое!A1:E18'" />
   </component>
 </project>

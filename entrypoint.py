@@ -1168,7 +1168,7 @@ def main():
             .fillna(0)
 
         df.fillna(0, inplace=True)
-        df['svobodnyh_akb'] = 0
+        df['svobodnyh_akb'] = df['Batteries V4.6/V4.7'] + df['Batteries numbers V3 PRO']
         df['skolko_nugno_akb'] = df['planovoye'] * df['akb_na_park_percent']
         df['skolko_dovesti_sim'] = df['planovoye'] - df['fact_park']
         df['skolko_dovesti_akb'] = df['skolko_nugno_akb'] - df['svobodnyh_akb']
