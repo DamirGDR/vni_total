@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="Добавил сломанные АКБ и ремонт АКБ">
+    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="Отладка АКБ">
       <change beforePath="$PROJECT_DIR$/entrypoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/entrypoint.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -154,7 +154,14 @@
       <option name="project" value="LOCAL" />
       <updated>1770636679687</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="Отладка АКБ">
+      <created>1770637136272</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1770637136272</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="Vcs.Log.History.Properties">
@@ -189,6 +196,7 @@
     <MESSAGE value="Добавил 0 в Kastoria_freego v.4.7." />
     <MESSAGE value="Аргос склад АКБ = Волос своб АКБ" />
     <MESSAGE value="Добавил сломанные АКБ и ремонт АКБ" />
-    <option name="LAST_COMMIT_MESSAGE" value="Добавил сломанные АКБ и ремонт АКБ" />
+    <MESSAGE value="Отладка АКБ" />
+    <option name="LAST_COMMIT_MESSAGE" value="Отладка АКБ" />
   </component>
 </project>
