@@ -1154,6 +1154,9 @@ def main():
         sheets_service = get_sheets_service(SERVICE_ACCOUNT_FILE)
         df3 = read_sheet_data_to_pandas(sheets_service, SPREADSHEET_ID, RANGE_NAME)
 
+        df_broken_repair = df3[(df3['city_id'] == '') & (df3['city_name'] != 'Итого')]
+
+        df3 = df3[df3['city_id'] != '']
         df3 = df3.replace('', '0')
         df3['city_id'] = df3['city_id'].astype(int)
         df3['planovoye'] = df3['planovoye'].fillna('0').replace('', '0').astype(int)
@@ -1245,7 +1248,7 @@ def main():
         df.loc[(df['city_id'] == 12) & (df['name'] == 'Argos Orestiko_freego v3pro'), 'svobodnyh_akb'] = int(
         df3.loc[df3['city_name'] == 'Аргос (склад Волоса)', 'Batteries numbers V3 PRO'].iloc[0])
         df.loc[(df['city_id'] == 12) & (df['name'] == 'Argos Orestiko_freego v.4.6.'), 'svobodnyh_akb'] = int(
-        df3.loc[df3['city_name'] == 'Аргос (склад Волоса)', 'Batteries V4.6'].iloc[0])
+        df3.loc[df3['city_name'] == 'Аргос (склад Волоса)', 'Batteries V4.6/V4.7'].iloc[0])
         df.loc[(df['city_id'] == 11) & (df['name'] == 'Kastoria_freego v3pro'), 'svobodnyh_akb'] = int(
             df3.loc[df3['city_name'] == 'Кастория (склад)', 'Batteries numbers V3 PRO'].iloc[0])
         df.loc[(df['city_id'] == 11) & (df['name'] == 'Kastoria_freego v.4.6.'), 'svobodnyh_akb'] = int(
@@ -1327,6 +1330,21 @@ def main():
             df.loc[df['name'] == 'Малый склад_v3pro', 'svobodnyh_akb'].iloc[0]) + int(
             df.loc[df['name'] == 'Малый склад_v.4.6', 'svobodnyh_akb'].iloc[0])
 
+        df['slomany_akb'] = 0
+        df['remont_akb'] = 0
+
+        df.loc[df['name'] == 'Главный склад_v.4.7', 'slomany_akb'] = int(
+            df_broken_repair.loc[df_broken_repair['city_name'] == 'Сломанные акб', 'Batteries V4.6/V4.7'].iloc[0])
+        df.loc[df['name'] == 'Главный склад_v3pro', 'slomany_akb'] = int(
+            df_broken_repair.loc[df_broken_repair['city_name'] == 'Сломанные акб', 'Batteries numbers V3 PRO'].iloc[0])
+        df.loc[df['name'] == 'Главный склад_v.4.7', 'remont_akb'] = int(
+            df_broken_repair.loc[df_broken_repair['city_name'] == 'акб на ремонте', 'Batteries V4.6/V4.7'].iloc[0])
+
+        df.loc[df['name'] == 'Total_stocks', 'slomany_akb'] = df.loc[
+            df['name'].str.contains('склад'), 'slomany_akb'].sum()
+        df.loc[df['name'] == 'Total_stocks', 'remont_akb'] = df.loc[
+            df['name'].str.contains('склад'), 'remont_akb'].sum()
+
         df.to_sql("akb_cities_and_stocks", engine_postgresql, if_exists="append", index=False)
         print('akb_cities_and_stocks UPDATED!')
 
@@ -1385,7 +1403,9 @@ def main():
                     raw.itogo_sim_for_city ,
                     raw.itogo_sim_for_stocks,
                     raw.donory ,
-                    raw.samokaty_v_puti 
+                    raw.samokaty_v_puti ,
+                    raw.slomany_akb ,
+                    raw.remont_akb
                 FROM 
                     (
                     SELECT
