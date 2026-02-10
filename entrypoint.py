@@ -1345,6 +1345,11 @@ def main():
         df.loc[df['name'] == 'Total_stocks', 'remont_akb'] = df.loc[
             df['name'].str.contains('склад'), 'remont_akb'].sum()
 
+        df.loc[df['name'] == 'Малый склад_v.4.7', 'svobodnyh_akb'] = 0
+        df.loc[df['name'] == 'Главный склад_v3pro', 'svobodnyh_akb'] = 0
+        df.loc[df['name'] == 'Total_cities', 'svobodnyh_akb'] = df.loc[df['name'] == 'Total_cities', 'svobodnyh_akb'] - \
+                                                                df.loc[df['name'] == 'Volos', 'svobodnyh_akb'].iloc[0]
+
         df.to_sql("akb_cities_and_stocks", engine_postgresql, if_exists="append", index=False)
         print('akb_cities_and_stocks UPDATED!')
 
