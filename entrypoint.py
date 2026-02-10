@@ -1324,11 +1324,14 @@ def main():
         df = pd.concat([df, pd.DataFrame.from_dict(total_row_sklady)])
         df['timestamp'] = pd.Timestamp.now() + pd.Timedelta(hours=3)
 
-        # Волос свободные АКБ
+        # Волос свободные АКБ, Сколько нужно АКБ, Сколько довести АКБ
         df.loc[(df['name'] == 'Volos') & (df['city_id'] == 17), 'svobodnyh_akb'] = int(
             df.loc[(df['name'] == 'Volos') & (df['city_id'] == 17), 'svobodnyh_akb'].iloc[0]) + int(
             df.loc[df['name'] == 'Малый склад_v3pro', 'svobodnyh_akb'].iloc[0]) + int(
             df.loc[df['name'] == 'Малый склад_v.4.6', 'svobodnyh_akb'].iloc[0])
+
+        df.loc[(df['name'] == 'Volos') & (df['city_id'] == 17), 'skolko_nugno_akb'] = int(
+            df.loc[(df['name'] == 'Volos') & (df['city_id'] == 17), 'svobodnyh_akb'].iloc[0])
 
         df['slomany_akb'] = 0
         df['remont_akb'] = 0
