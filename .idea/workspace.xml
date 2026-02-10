@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="Отладка АКБ">
+    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="Исправление Total_cities и складов">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -171,7 +171,14 @@
       <option name="project" value="LOCAL" />
       <updated>1770637473855</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="Исправление Total_cities и складов">
+      <created>1770709132627</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1770709132627</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="Vcs.Log.History.Properties">
@@ -207,6 +214,7 @@
     <MESSAGE value="Аргос склад АКБ = Волос своб АКБ" />
     <MESSAGE value="Добавил сломанные АКБ и ремонт АКБ" />
     <MESSAGE value="Отладка АКБ" />
-    <option name="LAST_COMMIT_MESSAGE" value="Отладка АКБ" />
+    <MESSAGE value="Исправление Total_cities и складов" />
+    <option name="LAST_COMMIT_MESSAGE" value="Исправление Total_cities и складов" />
   </component>
 </project>
