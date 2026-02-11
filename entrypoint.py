@@ -1350,7 +1350,7 @@ def main():
 
         df.loc[df['name'] == 'Малый склад_v.4.7', 'svobodnyh_akb'] = 0
         df.loc[df['name'] == 'Главный склад_v.4.7', 'svobodnyh_akb'] = 0
-        df.loc[df['name'] == 'Главный склад_v3pro', 'svobodnyh_akb'] = 0
+        # df.loc[df['name'] == 'Главный склад_v3pro', 'svobodnyh_akb'] = 0
         df.loc[df['name'] == 'Total_cities', 'svobodnyh_akb'] = df.loc[df['name'] == 'Total_cities', 'svobodnyh_akb'] - \
                                                                 df.loc[df['name'] == 'Volos', 'svobodnyh_akb'].iloc[0]
 
