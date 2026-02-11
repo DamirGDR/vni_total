@@ -1172,7 +1172,8 @@ def main():
 
         df.fillna(0, inplace=True)
         df['svobodnyh_akb'] = df['Batteries V4.6/V4.7'] + df['Batteries numbers V3 PRO']
-        df['skolko_nugno_akb'] = df['planovoye'] * df['akb_na_park_percent']
+        # df['skolko_nugno_akb'] = df['planovoye'] * df['akb_na_park_percent']
+        df['skolko_nugno_akb'] = df['fact_park'] * df['akb_na_park_percent']
         df['skolko_dovesti_sim'] = df['planovoye'] - df['fact_park']
         df['skolko_dovesti_akb'] = df['skolko_nugno_akb'] - df['svobodnyh_akb']
         df['timestamp'] = pd.Timestamp.now() + pd.Timedelta(hours=3)
@@ -1330,8 +1331,8 @@ def main():
             df.loc[df['name'] == 'Малый склад_v3pro', 'svobodnyh_akb'].iloc[0]) + int(
             df.loc[df['name'] == 'Малый склад_v.4.6', 'svobodnyh_akb'].iloc[0])
 
-        df.loc[(df['name'] == 'Volos') & (df['city_id'] == 17), 'skolko_nugno_akb'] = int(
-            df.loc[(df['name'] == 'Volos') & (df['city_id'] == 17), 'svobodnyh_akb'].iloc[0])
+        # df.loc[(df['name'] == 'Volos') & (df['city_id'] == 17), 'skolko_nugno_akb'] = int(
+        #     df.loc[(df['name'] == 'Volos') & (df['city_id'] == 17), 'svobodnyh_akb'].iloc[0])
 
         df['slomany_akb'] = 0
         df['remont_akb'] = 0
@@ -1355,6 +1356,8 @@ def main():
                                                                 df.loc[df['name'] == 'Volos', 'svobodnyh_akb'].iloc[0]
         df.loc[df['name'] == 'Total_stocks', 'svobodnyh_akb'] = int(
             df.loc[df['name'].str.contains('склад'), 'svobodnyh_akb'].sum())
+
+        df['skolko_dovesti_akb'] = df['skolko_nugno_akb'] - df['svobodnyh_akb']
 
         df.to_sql("akb_cities_and_stocks", engine_postgresql, if_exists="append", index=False)
         print('akb_cities_and_stocks UPDATED!')
