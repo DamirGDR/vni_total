@@ -1101,7 +1101,7 @@ def main():
 
         df1_all = pd.read_sql(select_df1_all, engine_mysql)
 
-        list_cities = [13, 15, 18, 16, 17, 19, 20, 21, 22, 25, 28, 29, 14, 32, 31]
+        list_cities = [13, 15, 18, 16, 17, 19, 20, 21, 22, 25, 28, 29, 14, 32, 31, 33]
         list_stocks = [11, 12]
 
         df1_all = df1_all.loc[df1_all['city_id'].isin(list_cities + list_stocks)]
