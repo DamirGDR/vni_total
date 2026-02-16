@@ -1359,6 +1359,41 @@ def main():
 
         df['skolko_dovesti_akb'] = df['skolko_nugno_akb'] - df['svobodnyh_akb']
 
+        # Total_cities
+        df = df[df['name'] != 'Total_cities']
+        df_cities = df[~(df['name'].str.contains('склад') | df['name'].str.contains('Total_stocks'))]
+        total_row_work = {
+            'timestamp': [pd.Timestamp.now() + pd.Timedelta(hours=3)],
+            'city_id': [100],
+            'name': ['Total_cities'],
+            'uteryany': [df_cities['uteryany'].sum()],
+            'v_ozhidanii_activacii': [df_cities['v_ozhidanii_activacii'].sum()],
+            'slugebnyi_transport': [df_cities['slugebnyi_transport'].sum()],
+            'remont': [df_cities['remont'].sum()],
+            'vyveden_iz_ekspluatacii': [df_cities['vyveden_iz_ekspluatacii'].sum()],
+            'mr_user': [df_cities['mr_user'].sum()],
+            'kvt': [df_cities['kvt'].sum()],
+            'kvt_offline': [df_cities['kvt_offline'].sum()],
+            'mr_admin': [df_cities['mr_admin'].sum()],
+            'fact_park': [df_cities['fact_park'].sum()],
+            'planovoye': [df_cities['planovoye'].sum()],
+            'svobodnyh_akb': [df_cities['svobodnyh_akb'].sum()],
+            'skolko_nugno_akb': [df_cities['skolko_nugno_akb'].sum()],
+            'akb_na_park_percent': [0],
+            'skolko_dovesti_sim': [df_cities['skolko_dovesti_sim'].sum()],
+            'skolko_dovesti_akb': [df_cities['skolko_dovesti_akb'].sum()],
+            'itogo_sim_for_city': [df_cities['itogo_sim_for_city'].sum()],
+            'spisannye': [df_cities['spisannye'].sum()],
+            'itogo_sim_for_stocks': [df_cities['itogo_sim_for_stocks'].sum()],
+            'donory': [df_cities['donory'].sum()],
+            'samokaty_v_puti': [df_cities['samokaty_v_puti'].sum()]
+        }
+        df = pd.concat([df, pd.DataFrame.from_dict(total_row_work)])
+        df['slomany_akb'].fillna(0, inplace=True)
+        df['remont_akb'].fillna(0, inplace=True)
+        df['itogo_sim_for_city'] = df['uteryany'] + df['v_ozhidanii_activacii'] + df['slugebnyi_transport'] + df[
+            'remont'] + df['vyveden_iz_ekspluatacii'] + df['mr_user'] + df['kvt'] + df['mr_admin'] + df['kvt_offline']
+
         df.to_sql("akb_cities_and_stocks", engine_postgresql, if_exists="append", index=False)
         print('akb_cities_and_stocks UPDATED!')
 

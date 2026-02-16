@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="Исправление для Сколько довести АКБ" />
+    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="Добавил Agrinio в АКБ">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entrypoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/entrypoint.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -218,7 +221,14 @@
       <option name="project" value="LOCAL" />
       <updated>1770812816796</updated>
     </task>
-    <option name="localTasksCounter" value="22" />
+    <task id="LOCAL-00022" summary="Добавил Agrinio в АКБ">
+      <created>1770884772782</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1770884772782</updated>
+    </task>
+    <option name="localTasksCounter" value="23" />
     <servers />
   </component>
   <component name="Vcs.Log.History.Properties">
@@ -260,6 +270,7 @@
     <MESSAGE value="Исправление" />
     <MESSAGE value="Исправление для Total_stocks" />
     <MESSAGE value="Исправление для Сколько довести АКБ" />
-    <option name="LAST_COMMIT_MESSAGE" value="Исправление для Сколько довести АКБ" />
+    <MESSAGE value="Добавил Agrinio в АКБ" />
+    <option name="LAST_COMMIT_MESSAGE" value="Добавил Agrinio в АКБ" />
   </component>
 </project>
