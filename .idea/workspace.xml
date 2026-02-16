@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="Добавил Agrinio в АКБ">
+    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="Исправления для total_cities">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/entrypoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/entrypoint.py" afterDir="false" />
     </list>
@@ -228,7 +228,14 @@
       <option name="project" value="LOCAL" />
       <updated>1770884772782</updated>
     </task>
-    <option name="localTasksCounter" value="23" />
+    <task id="LOCAL-00023" summary="Исправления для total_cities">
+      <created>1771242527208</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1771242527208</updated>
+    </task>
+    <option name="localTasksCounter" value="24" />
     <servers />
   </component>
   <component name="Vcs.Log.History.Properties">
@@ -271,6 +278,7 @@
     <MESSAGE value="Исправление для Total_stocks" />
     <MESSAGE value="Исправление для Сколько довести АКБ" />
     <MESSAGE value="Добавил Agrinio в АКБ" />
-    <option name="LAST_COMMIT_MESSAGE" value="Добавил Agrinio в АКБ" />
+    <MESSAGE value="Исправления для total_cities" />
+    <option name="LAST_COMMIT_MESSAGE" value="Исправления для total_cities" />
   </component>
 </project>

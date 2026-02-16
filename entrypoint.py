@@ -1386,11 +1386,13 @@ def main():
             'spisannye': [df_cities['spisannye'].sum()],
             'itogo_sim_for_stocks': [df_cities['itogo_sim_for_stocks'].sum()],
             'donory': [df_cities['donory'].sum()],
-            'samokaty_v_puti': [df_cities['samokaty_v_puti'].sum()]
+            'samokaty_v_puti': [df_cities['samokaty_v_puti'].sum()],
+            'slomany_akb': [0],
+            'remont_akb': [0]
         }
         df = pd.concat([df, pd.DataFrame.from_dict(total_row_work)])
-        df['slomany_akb'].fillna(0, inplace=True)
-        df['remont_akb'].fillna(0, inplace=True)
+        # df['slomany_akb'].fillna(0, inplace=True)
+        # df['remont_akb'].fillna(0, inplace=True)
         df['itogo_sim_for_city'] = df['uteryany'] + df['v_ozhidanii_activacii'] + df['slugebnyi_transport'] + df[
             'remont'] + df['vyveden_iz_ekspluatacii'] + df['mr_user'] + df['kvt'] + df['mr_admin'] + df['kvt_offline']
 
