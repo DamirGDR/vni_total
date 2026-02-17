@@ -1396,10 +1396,10 @@ def main():
         df['itogo_sim_for_city'] = df['uteryany'] + df['v_ozhidanii_activacii'] + df['slugebnyi_transport'] + df[
             'remont'] + df['vyveden_iz_ekspluatacii'] + df['mr_user'] + df['kvt'] + df['mr_admin'] + df['kvt_offline']
 
-        df.loc[df['name'] == 'Total_cities', 'itogo_sim_for_city'] = df.loc[df[
-                                                                                'name'] == 'Total_cities', 'itogo_sim_for_city'] - \
+        df.loc[df['name'] == 'Total_cities', 'svobodnyh_akb'] = df.loc[df[
+                                                                                'name'] == 'Total_cities', 'svobodnyh_akb'] - \
                                                                      df.loc[df[
-                                                                                'name'] == 'Volos', 'itogo_sim_for_city'].iloc[
+                                                                                'name'] == 'Volos', 'svobodnyh_akb'].iloc[
                                                                          0]
         df.to_sql("akb_cities_and_stocks", engine_postgresql, if_exists="append", index=False)
         print('akb_cities_and_stocks UPDATED!')
