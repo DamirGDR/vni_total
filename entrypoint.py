@@ -4145,614 +4145,617 @@ def main():
     df_t_area_revenue_stats1.to_sql("t_area_revenue_stats1", engine_postgresql, if_exists="append", index=False)
     print('Таблица t_area_revenue_stats1 успешно обновлена!')
 
-    # Расчет зп. Начало 30.09.2025
-    SERVICE_ACCOUNT_FILE = './google_json.json'
-    SPREADSHEET_ID = '1dSOV9X2FV3mnOmnwWvTMJuCCZ-tVBf64DP90k3EYD90'
-    RANGE_NAME = 'График работ!A:L'
-    service_account_file = generated_json_file
+    try:
+        # Расчет зп. Начало 30.09.2025
+        SERVICE_ACCOUNT_FILE = './google_json.json'
+        SPREADSHEET_ID = '1dSOV9X2FV3mnOmnwWvTMJuCCZ-tVBf64DP90k3EYD90'
+        RANGE_NAME = 'График работ!A:L'
+        service_account_file = generated_json_file
 
-    sheets_service = get_sheets_service(SERVICE_ACCOUNT_FILE)
+        sheets_service = get_sheets_service(SERVICE_ACCOUNT_FILE)
 
-    # Выгрузка для Каждый работник
-    select_for_workers = '''
-        SELECT 
-            date_trunc('month', grg."Date")::date AS "Месяц",
-            grg.* ,
-            EXTRACT(EPOCH FROM (grg."Actual finish time" - grg."Actual start time"))::int AS "Actual working seconds"
-        FROM  
-        (
-            SELECT
-                grg."Date"::date ,
-                grg."Worker id"::int ,
-                grg."Worker username" ,
-                grg."Worker nickname" ,
-                to_timestamp(concat(grg."Date", ' ', grg."Actual start time"), 'YYYY-MM-DD HH24:MI:SS') AS "Actual start time" ,
-                CASE 
-                    WHEN grg."Actual start time" < grg."Actual finish time" THEN to_timestamp(concat(grg."Date", ' ', grg."Actual finish time"), 'YYYY-MM-DD HH24:MI:SS')
-                    ELSE to_timestamp(concat(grg."Date", ' ', grg."Actual finish time"), 'YYYY-MM-DD HH24:MI:SS') + interval '1 day'
-                END  AS "Actual finish time" ,
-                grg."Finish odometer kilometers"::float - grg."Start odometer kilometers"::float AS distance
-            FROM damir.grafik_rabot_google grg 
-            WHERE grg."Actual start time" != '00:00:70'
-                AND grg."Actual finish time" != '00:00:70'
-                AND grg."Date" >= '2025-08-01'
-            ) AS grg
-    '''
-    df_for_workers = pd.read_sql(select_for_workers, engine_postgresql)
-    df_for_workers['Месяц'] = pd.to_datetime(df_for_workers['Месяц'], errors='coerce')
-
-    # Скачиваю Таблица(ставки)
-    RANGE_NAME_2 = 'Таблица(ставки)!A:BF'
-    sheets_service = get_sheets_service(SERVICE_ACCOUNT_FILE)
-    df_tabl_stavki = read_sheet_data_to_pandas(sheets_service, SPREADSHEET_ID, RANGE_NAME_2)
-
-    new_columns = df_tabl_stavki.iloc[0]
-    df_tabl_stavki.columns = new_columns
-    df_tabl_stavki.drop(index=df_tabl_stavki.index[0], axis=0, inplace=True)
-    df_tabl_stavki = df_tabl_stavki[df_tabl_stavki['Месяц'].notna()]
-    df_tabl_stavki['Месяц'] = pd.to_datetime(df_tabl_stavki['Месяц'], errors='coerce')
-    df_tabl_stavki['Дата нового условия ставки (час)'] = pd.to_datetime(
-        df_tabl_stavki['Дата нового условия ставки (час)'], errors='coerce').replace('1970-01-01', 'NaT')
-    df_tabl_stavki['Дата нового условия ставки (нед)'] = pd.to_datetime(
-        df_tabl_stavki['Дата нового условия ставки (нед)'], errors='coerce').replace('1970-01-01', 'NaT')
-    df_tabl_stavki['Дата нового условия ставки (мес)'] = pd.to_datetime(
-        df_tabl_stavki['Дата нового условия ставки (мес)'], errors='coerce').replace('1970-01-01', 'NaT')
-    df_tabl_stavki['Нач_дата_расч_бонуса_нов_сотр'] = pd.to_datetime(
-        df_tabl_stavki['Нач_дата_расч_бонуса_нов_сотр'], errors='coerce').replace('1970-01-01', 'NaT')
-    df_tabl_stavki['Оконч_дата_расч_бонус_нов_сотр'] = pd.to_datetime(
-        df_tabl_stavki['Оконч_дата_расч_бонус_нов_сотр'], errors='coerce')
-    df_tabl_stavki = df_tabl_stavki.replace('', '0')
-    df_tabl_stavki['Worker id'] = df_tabl_stavki['Worker id'].astype(int)
-    df_tabl_stavki['Количество отработанных часов'] = df_tabl_stavki['Количество отработанных часов'].fillna(0).astype(float)
-    df_tabl_stavki['Ставка за час'] = df_tabl_stavki['Ставка за час'].fillna(0).astype(float)
-    df_tabl_stavki['Ставка измененная за час'] = df_tabl_stavki['Ставка измененная за час'].fillna(0).astype(float)
-    df_tabl_stavki['Ставка за неделю'] = df_tabl_stavki['Ставка за неделю'].fillna(0).astype(float)
-    df_tabl_stavki['Ставка измененная за неделю'] = df_tabl_stavki['Ставка измененная за неделю'].fillna(0).astype(float)
-    df_tabl_stavki['Ставка за месяц'] = df_tabl_stavki['Ставка за месяц'].fillna(0).astype(float)
-    df_tabl_stavki['Норма рабочих часов за месяц'] = df_tabl_stavki['Норма рабочих часов за месяц'].fillna(0).astype(float)
-    df_tabl_stavki['Ставка свыше нормы'] = df_tabl_stavki['Ставка свыше нормы'].fillna(0).astype(float)
-    df_tabl_stavki['Количество отработанных часов свыше нормы'] = df_tabl_stavki[
-        'Количество отработанных часов свыше нормы'].fillna(0).astype(float)
-    df_tabl_stavki['Ставка измененная за месяц'] = df_tabl_stavki['Ставка измененная за месяц'].fillna(0).astype(float)
-    df_tabl_stavki['Норма расхода топлива на 100 км, литры'] = df_tabl_stavki[
-        'Норма расхода топлива на 100 км, литры'].fillna(0).astype(float)
-    df_tabl_stavki['Цена топлива за 1 литр, евро'] = df_tabl_stavki['Цена топлива за 1 литр, евро'].fillna(0).astype(float)
-    df_tabl_stavki['Количество часов работы на складе'] = df_tabl_stavki['Количество часов работы на складе'].fillna(0).astype(
-        float)
-    df_tabl_stavki['Бонус за работу на складе'] = df_tabl_stavki['Бонус за работу на складе'].fillna(0).astype(float)
-    df_tabl_stavki['Бонус за ремонт'] = df_tabl_stavki['Бонус за ремонт'].fillna(0).astype(float)
-    df_tabl_stavki['Общее количество заряженных батарей'] = df_tabl_stavki[
-        'Общее количество заряженных батарей'].replace('-', '0').fillna(0).astype(float)
-    df_tabl_stavki['Сумма1'] = df_tabl_stavki['Сумма1'].fillna(0).astype(float)
-    df_tabl_stavki['Сумма2'] = df_tabl_stavki['Сумма2'].fillna(0).astype(float)
-    df_tabl_stavki['Сумма3'] = df_tabl_stavki['Сумма3'].fillna(0).astype(float)
-    df_tabl_stavki['Сумма4'] = df_tabl_stavki['Сумма4'].fillna(0).astype(float)
-    df_tabl_stavki['Сумма5'] = df_tabl_stavki['Сумма5'].fillna(0).astype(float)
-    df_tabl_stavki['Сумма6'] = df_tabl_stavki['Сумма6'].fillna(0).astype(float)
-    df_tabl_stavki['Сумма7'] = df_tabl_stavki['Сумма7'].fillna(0).astype(float)
-    df_tabl_stavki['Штраф'] = df_tabl_stavki['Штраф'].fillna(0).astype(float)
-    df_tabl_stavki['Аванс'] = df_tabl_stavki['Аванс'].fillna(0).astype(float)
-    df_tabl_stavki['Сумма8'] = df_tabl_stavki['Сумма8'].fillna(0).astype(float)
-    df_tabl_stavki['Сумма9'] = df_tabl_stavki['Сумма9'].fillna(0).astype(float)
-    df_tabl_stavki['Сумма10'] = df_tabl_stavki['Сумма10'].fillna(0).astype(float)
-    df_tabl_stavki['Процент_от_зп_бонус_прогр'] = df_tabl_stavki[
-        'Процент_от_зп_бонус_прогр'].fillna(0).astype(float)
-    df_tabl_stavki['id_invited_worker_nickname_бонусная_программа'] = df_tabl_stavki[
-        'id_invited_worker_nickname_бонусная_программа'].fillna(0).astype(int)
-    df_for_workers_distance = df_for_workers.groupby(['Месяц', 'Worker id', 'Worker username', 'Worker nickname'],
-                                                     as_index=False) \
-        .agg({'distance': 'sum'})
-
-    df_temp = df_tabl_stavki.merge(df_for_workers_distance,
-                                   how='left', on=['Месяц', 'Worker id', 'Worker username', 'Worker nickname'])
-    df_temp['Компенсация топлива'] = df_temp['Норма расхода топлива на 100 км, литры'] * df_temp['distance'] * df_temp[
-        'Цена топлива за 1 литр, евро'] / 100
-    df_temp['Зарядка АКБ'] = df_temp['Общее количество заряженных батарей'] * 0.2
-    df_temp['Работа на складе'] = df_temp['Количество часов работы на складе'] * df_temp['Ставка за час']
-    df_temp['Возмещаемые расходы'] = df_temp['Сумма1'] + df_temp['Сумма2'] + df_temp['Сумма3']
-    df_temp['Офиц_зп'] = df_temp['Сумма4'] + df_temp['Сумма5'] + df_temp['Сумма6'] + df_temp['Сумма7']
-    df_temp['Кол-во дней для расчета бонуса'] = (df_temp['Оконч_дата_расч_бонус_нов_сотр'] - df_temp[
-        'Нач_дата_расч_бонуса_нов_сотр']) / pd.Timedelta(days=1)
-    # df_temp['Бонус приведи друга'] = df_temp['Кол-во дней для расчета бонуса'] * 5 * df_temp[
-    #     'Процент от зарплаты, % (бонусная программа)'] / 100
-    df_temp['Бонус приведи друга'] = df_temp['Кол-во дней для расчета бонуса'].fillna(0) * 5 * df_temp[
-        'Процент_от_зп_бонус_прогр'].fillna(0).astype(float) / 100
-    df_temp['Всего удержано'] = df_temp['Сумма8'].fillna(0) + df_temp['Сумма9'].fillna(0) + df_temp['Сумма10'].fillna(0)
-    df_temp['Конец месяца'] = df_temp['Месяц'] + pd.tseries.offsets.MonthEnd()
-
-    # Проверка вида ставки
-    def type_stavka(df):
-        if df['Ставка за час'] != 0:
-            return 'Ставка за час'
-        elif df['Ставка за неделю'] != 0:
-            return 'Ставка за неделю'
-        elif df['Ставка за месяц'] != 0:
-            return 'Ставка за месяц'
-        else:
-            return None
-
-    df_temp['Тип ставки'] = df_temp.apply(type_stavka, axis=1)
-
-    # Обработка столбцов Ставка за час
-    # По дням расписываю работников
-    df_temp['Ставка за час постоянно'] = df_temp['Дата нового условия ставки (час)'].fillna(0).apply(
-        lambda x: 0 if x == 0 else 1)
-
-    columns = ['Date', 'Worker id', 'Ставка за час']
-    res = pd.DataFrame(columns=columns)
-
-    columns_month = ['Месяц', 'Worker id']
-    res_month = pd.DataFrame(columns=columns_month)
-
-    for index, row in df_temp.iterrows():
-
-        if (row['Ставка за час постоянно'] == 0) & (row['Тип ставки'] == 'Ставка за час'):
-            #         print('Постоянно')
-            dates1 = pd.date_range(start=row['Месяц'], end=row['Конец месяца'], freq='D')
-            df1 = pd.DataFrame(dates1, columns=['Date'])
-            df1['Ставка за час'] = row['Ставка за час']
-            df1['Worker id'] = row['Worker id']
-            df1['Worker username'] = row['Worker username']
-            df1['Worker nickname'] = row['Worker nickname']
-            df1['Worker role'] = row['Worker role']
-            df1['city'] = row['city']
-            res = pd.concat([res, df1], ignore_index=True)
-
-        elif (row['Ставка за час постоянно'] == 1) & (row['Тип ставки'] == 'Ставка за час'):
-            #         print('Не постоянно')
-            # Диапазон до изменения ставки
-            dates1 = pd.date_range(start=row['Месяц'],
-                                   end=row['Дата нового условия ставки (час)'] - pd.Timedelta(hours=1), freq='D')
-            df1 = pd.DataFrame(dates1, columns=['Date'])
-            df1['Ставка за час'] = row['Ставка за час']
-            df1['Worker id'] = row['Worker id']
-            df1['Worker username'] = row['Worker username']
-            df1['Worker nickname'] = row['Worker nickname']
-            df1['Worker role'] = row['Worker role']
-            df1['city'] = row['city']
-            df1['Посменная зп'] = 0
-
-            # Диапазон после изменения ставки
-            dates2 = pd.date_range(start=row['Дата нового условия ставки (час)'], end=row['Конец месяца'], freq='D')
-            df2 = pd.DataFrame(dates2, columns=['Date'])
-            df2['Ставка за час'] = row['Ставка измененная за час']
-            df2['Worker id'] = row['Worker id']
-            df2['Worker username'] = row['Worker username']
-            df2['Worker nickname'] = row['Worker nickname']
-            df2['Worker role'] = row['Worker role']
-            df2['city'] = row['city']
-            df2['Посменная зп'] = 0
-            res = pd.concat([res, df1, df2], ignore_index=True)
-        elif row['Тип ставки'] == 'Ставка за месяц':
-            dates3 = pd.date_range(start=row['Месяц'], end=row['Месяц'], freq='D')
-            df3 = pd.DataFrame(dates3, columns=['Месяц'])
-            df3['Worker id'] = row['Worker id']
-            df3['Worker username'] = row['Worker username']
-            df3['Worker nickname'] = row['Worker nickname']
-            df3['Worker role'] = row['Worker role']
-            df3['city'] = row['city']
-            res_month = pd.concat([res_month, df3], ignore_index=True)
-            res_month['Сдельная зп'] = 0
-            res_month['Посменная зп'] = row['Ставка за месяц']
-
-    res_month['Месяц'] = pd.to_datetime(res_month['Месяц'], errors='coerce')
-
-    # Работаю для Христоса
-    # Удаляю Христоса
-    res = res.drop(res[res['Worker id'] == 35].index)
-
-    res['Месяц'] = res['Date'].apply(lambda x: x.strftime('%Y-%m-01'))
-    res['Месяц'] = pd.to_datetime(res['Месяц'], errors='coerce')
-    res['Date'] = pd.to_datetime(res['Date'], errors='coerce')
-    res['Ставка за час'] = res['Ставка за час'].astype(float)
-    res['Worker id'] = res['Worker id'].astype(int)
-
-    # Выгрузка Ставка за час для Христоса
-    select_min_efficiency = '''
-        SELECT
-            ds."Date",
-            ds."Worker id",
-            ds."Nickname" AS "Worker nickname",
-            CASE 
-                WHEN COALESCE( SUM(ds."Minutes") / NULLIF(SUM(ds."Actual duration (hours)" ), 0) / 60, 0) < 0.36 THEN 5
-                ELSE 6
-            END AS "Ставка за час"
-        FROM public.daily_shifts ds
-        WHERE ds."Date" >= '2025-08-01' AND ds."Worker id" = 35
-        GROUP BY ds."Date", ds."Worker id", ds."Nickname"
-    '''
-
-    df_c = pd.read_sql(select_min_efficiency, engine_postgresql)
-    df_c['Date'] = pd.to_datetime(df_c['Date'], errors='coerce')
-
-    # Генерирую календарь для Христоса
-    columns = ['Date', 'Worker id']
-    res_c = pd.DataFrame(columns=columns)
-
-    for index, row in df_temp[df_temp['Worker id'] == 35].iterrows():
-
-        if (row['Ставка за час постоянно'] == 0) & (row['Тип ставки'] == 'Ставка за час'):
-            #         print('Постоянно')
-
-            dates1 = pd.date_range(start=row['Месяц'], end=row['Конец месяца'], freq='D')
-            df1 = pd.DataFrame(dates1, columns=['Date'])
-            df1['Worker id'] = row['Worker id']
-            df1['Worker username'] = row['Worker username']
-            df1['Worker nickname'] = row['Worker nickname']
-            df1['Worker role'] = row['Worker role']
-            df1['city'] = row['city']
-            res_c = pd.concat([res_c, df1], ignore_index=True)
-
-        elif (row['Ставка за час постоянно'] == 1) & (row['Тип ставки'] == 'Ставка за час'):
-            #         print('Не постоянно')
-            # Диапазон до изменения ставки
-            dates1 = pd.date_range(start=row['Месяц'],
-                                   end=row['Дата нового условия ставки (час)'] - pd.Timedelta(hours=1), freq='D')
-            df1 = pd.DataFrame(dates1, columns=['Date'])
-            df1['Worker id'] = row['Worker id']
-            df1['Worker username'] = row['Worker username']
-            df1['Worker nickname'] = row['Worker nickname']
-            df1['Worker role'] = row['Worker role']
-            df1['city'] = row['city']
-            df1['Посменная зп'] = 0
-
-            # Диапазон после изменения ставки
-            dates2 = pd.date_range(start=row['Дата нового условия ставки (час)'], end=row['Конец месяца'], freq='D')
-            df2 = pd.DataFrame(dates2, columns=['Date'])
-            df2['Worker id'] = row['Worker id']
-            df2['Worker username'] = row['Worker username']
-            df2['Worker nickname'] = row['Worker nickname']
-            df2['Worker role'] = row['Worker role']
-            df2['city'] = row['city']
-            df2['Посменная зп'] = 0
-            res_c = pd.concat([res_c, df1, df2], ignore_index=True)
-
-    res_c['Месяц'] = res_c['Date'].apply(lambda x: x.strftime('%Y-%m-01'))
-    res_c['Месяц'] = pd.to_datetime(res_c['Месяц'], errors='coerce')
-    res_c['Date'] = pd.to_datetime(res_c['Date'], errors='coerce')
-    res_c['Worker id'] = res_c['Worker id'].astype(int)
-    res_c['Посменная зп'] = 0
-
-    res_c = res_c.merge(df_c, on=['Date', 'Worker id', 'Worker nickname'])
-    res = pd.concat([res, res_c])
-
-    df_for_workers['Date'] = pd.to_datetime(df_for_workers['Date'])
-    res['Date'] = pd.to_datetime(res['Date'])
-
-    # Учет дат выезда_. Начало
-    df_vyezd = df_tabl_stavki[['Месяц', 'Worker id',
-                               'Ставка за выезд в другие города', 'Дата выезда 1',
-                               'Дата выезда 2', 'Дата выезда3', 'Дата выезда4', 'Дата выезда5']]
-
-    df_vyezd = df_vyezd[df_vyezd['Ставка за выезд в другие города'].notna()]
-    df_vyezd['Ставка за выезд в другие города'] = df_vyezd['Ставка за выезд в другие города'].astype(float)
-    df_vyezd['Дата выезда 1'] = pd.to_datetime(df_vyezd['Дата выезда 1'], errors='coerce')
-    df_vyezd['Дата выезда 2'] = pd.to_datetime(df_vyezd['Дата выезда 2'], errors='coerce')
-    df_vyezd['Дата выезда3'] = pd.to_datetime(df_vyezd['Дата выезда3'], errors='coerce')
-    df_vyezd['Дата выезда4'] = pd.to_datetime(df_vyezd['Дата выезда4'], errors='coerce')
-    df_vyezd['Дата выезда5'] = pd.to_datetime(df_vyezd['Дата выезда5'], errors='coerce')
-
-    for index, row in df_vyezd.iterrows():
-        if not pd.isnull(df_vyezd.loc[index]['Дата выезда 1']):
-            res.loc[(res['Worker id'] == df_vyezd.loc[index]['Worker id']) & \
-                    (res['Date'] == df_vyezd.loc[index]['Дата выезда 1']), 'Ставка за час'] = \
-                float(df_vyezd.loc[index]['Ставка за выезд в другие города'])
-        if not pd.isnull(df_vyezd.loc[index]['Дата выезда 2']):
-            res.loc[(res['Worker id'] == df_vyezd.loc[index]['Worker id']) & \
-                    (res['Date'] == df_vyezd.loc[index]['Дата выезда 2']), 'Ставка за час'] = \
-                float(df_vyezd.loc[index]['Ставка за выезд в другие города'])
-        if not pd.isnull(df_vyezd.loc[index]['Дата выезда3']):
-            res.loc[(res['Worker id'] == df_vyezd.loc[index]['Worker id']) & \
-                    (res['Date'] == df_vyezd.loc[index]['Дата выезда3']), 'Ставка за час'] = \
-                float(df_vyezd.loc[index]['Ставка за выезд в другие города'])
-        if not pd.isnull(df_vyezd.loc[index]['Дата выезда4']):
-            res.loc[(res['Worker id'] == df_vyezd.loc[index]['Worker id']) & \
-                    (res['Date'] == df_vyezd.loc[index]['Дата выезда4']), 'Ставка за час'] = \
-                float(df_vyezd.loc[index]['Ставка за выезд в другие города'])
-        if not pd.isnull(df_vyezd.loc[index]['Дата выезда5']):
-            res.loc[(res['Worker id'] == df_vyezd.loc[index]['Worker id']) & \
-                    (res['Date'] == df_vyezd.loc[index]['Дата выезда5']), 'Ставка за час'] = \
-                float(df_vyezd.loc[index]['Ставка за выезд в другие города'])
-
-    res = df_for_workers.merge(res, on=['Месяц', 'Date', 'Worker id', 'Worker username', 'Worker nickname'], how='left')
-    res['Сдельная зп'] = res['Ставка за час'] * res['Actual working seconds'] / 3600
-
-    res_workers_month = res.groupby(['Месяц', 'Worker id', 'Worker username', 'Worker nickname', 'Worker role', 'city']) \
-        .agg({'Actual working seconds': 'sum',
-              'Сдельная зп': 'sum', 'Посменная зп': 'sum'}) \
-        .reset_index()
-    res_month['Actual worked seconds'] = 0
-    res_month['Сдельная зп'] = res_month['Сдельная зп'].astype(float)
-    res_month['Actual worked seconds'] = res_month['Actual worked seconds'].astype(float)
-    res_month['Worker id'] = res_month['Worker id'].astype(int)
-    res_month['Date'] = res_month['Месяц']
-    res_month['Actual start time'] = res_month['Месяц']
-    res_month['Actual finish time'] = res_month['Месяц']
-
-
-    df_zp = pd.concat([res, res_month]).fillna(0)
-
-    res_for_workers = df_zp[['Месяц', 'Date', 'Worker id', 'Worker username', 'Worker nickname',
-                             'Actual start time', 'Actual finish time', 'distance',
-                             'Actual working seconds', 'Ставка за час']]
-
-    # Очистка таблицы
-    truncate_t_bike = "TRUNCATE TABLE salary_outer_1 RESTART IDENTITY;"
-    with engine_postgresql.connect() as connection:
-        with connection.begin() as transaction:
-            print(f"Попытка очистить таблицу")
-            # Очистка salary_inner
-            connection.execute(sa.text(truncate_t_bike))
-            # Если ошибок нет, транзакция фиксируется автоматически
-            print(f"Таблица salary_outer_1 успешно очищена!")
-
-    res_for_workers.to_sql("salary_outer_1", engine_postgresql, if_exists="append", index=False)
-    print('Таблица salary_outer_1 успешно обновлена!')
-
-    df_zp_month = df_zp.groupby(['Месяц', 'Worker id', 'Worker username', 'Worker nickname'], as_index=False) \
-        .agg({'distance': 'sum',
-              'Actual working seconds': 'sum',
-              'Посменная зп': 'sum',
-              'Сдельная зп': 'sum',
-              'Actual worked seconds': 'sum'})
-
-    df = df_zp_month.merge(df_temp,
-                           on=['Месяц', 'Worker id', 'Worker username', 'Worker nickname'],
-                           how='right')
-    df = df[['Месяц', 'Worker id', 'Worker username', 'Worker nickname',
-             'Worker role', 'city', 'Сдельная зп', 'Посменная зп',
-             'Компенсация топлива', 'Зарядка АКБ', 'Работа на складе',
-             'Бонус за работу на складе', 'Бонус за ремонт', 'Возмещаемые расходы',
-             'Бонус приведи друга', 'Штраф', 'Аванс', 'Всего удержано', 'Офиц_зп',
-             'Actual working seconds',
-             'Actual worked seconds',
-             'Количество отработанных часов', 'Ставка за час',
-             'Ставка измененная за час', 'Дата нового условия ставки (час)',
-             'Ставка за неделю', 'Ставка измененная за неделю',
-             'Дата нового условия ставки (нед)', 'Ставка за месяц',
-             'Норма рабочих часов за месяц', 'Ставка свыше нормы',
-             'Количество отработанных часов свыше нормы',
-             'Ставка измененная за месяц', 'Дата нового условия ставки (мес)',
-             'Норма расхода топлива на 100 км, литры',
-             'Цена топлива за 1 литр, евро', 'Количество часов работы на складе',
-             'Общее количество заряженных батарей', 'Сумма1', 'Возмещаемые расходы1',
-             'Сумма2', 'Возмещаемые расходы2', 'Сумма3', 'Возмещаемые расходы3',
-             'Сумма4', 'официальная зп 1', 'Сумма5', 'официальная зп 2', 'Сумма6',
-             'официальная зп 3', 'Сумма7', 'официальная зп 4',
-             'Сумма8', 'Удерживаемые расходы1', 'Сумма9', 'Удерживаемые расходы2',
-             'Сумма10', 'Удерживаемые расходы3',
-             'id_invited_worker_nickname_бонусная_программа',
-             'invited_worker_nickname_бонусная_программа',
-             'Процент_от_зп_бонус_прогр',
-             'Нач_дата_расч_бонуса_нов_сотр',
-             'Оконч_дата_расч_бонус_нов_сотр',
-             'Кол-во дней для расчета бонуса',
-             'Конец месяца', 'Тип ставки',
-             'Ставка за час постоянно']]
-
-    df['Дата нового условия ставки (час)'] = df['Дата нового условия ставки (час)'].fillna(df['Месяц'])
-    df['Дата нового условия ставки (нед)'] = df['Дата нового условия ставки (нед)'].fillna(df['Месяц'])
-    df['Дата нового условия ставки (мес)'] = df['Дата нового условия ставки (мес)'].fillna(df['Месяц'])
-    df['Нач_дата_расч_бонуса_нов_сотр'] = df['Нач_дата_расч_бонуса_нов_сотр'].fillna(df['Месяц'])
-    df['Оконч_дата_расч_бонус_нов_сотр'] = df['Оконч_дата_расч_бонус_нов_сотр'].fillna(df['Месяц'])
-    df = df.round(2).fillna(0)
-
-    # Бонусы за декады
-    select_decades_bonus = '''
-        SELECT 
-            ds."month" AS "Месяц",
-            ds."decade",
-            ds."nomer_decada",
-            ds."Worker id",
-            ds."Nickname" AS "Worker nickname",
-            CASE
-                WHEN ds."Prediction minutes" >= 1440 AND ds."Prediction minutes" <= 1920
-                    THEN
-                        CASE
-                            WHEN ds.min_eff >= 0.25 AND ds.min_eff < 0.35 THEN round((0.5 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                            WHEN ds.min_eff >= 0.35 AND ds.min_eff < 0.4 THEN round((0.6 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                            WHEN ds.min_eff >= 0.4 AND ds.min_eff < 0.5 THEN round((0.75 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                            WHEN ds.min_eff >= 0.5 AND ds.min_eff < 0.6 THEN round((1 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                            WHEN ds.min_eff >= 0.6 THEN round((2 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                        END
-                WHEN ds."Prediction minutes" > 1920 AND ds."Prediction minutes" <= 2880
-                    THEN
-                        CASE
-                            WHEN ds.min_eff >= 0.25 AND ds.min_eff < 0.35 THEN round((0.6 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                            WHEN ds.min_eff >= 0.35 AND ds.min_eff < 0.4 THEN round((0.7 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                            WHEN ds.min_eff >= 0.4 AND ds.min_eff < 0.5 THEN round((1 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                            WHEN ds.min_eff >= 0.5 AND ds.min_eff < 0.6 THEN round((1.25 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                            WHEN ds.min_eff >= 0.6 THEN round((2.1 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                        END
-                WHEN ds."Prediction minutes" > 2880 AND ds."Prediction minutes" <= 3840
-                    THEN
-                        CASE
-                            WHEN ds.min_eff >= 0.25 AND ds.min_eff < 0.35 THEN round((0.7 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                            WHEN ds.min_eff >= 0.35 AND ds.min_eff < 0.4 THEN round((0.75 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                            WHEN ds.min_eff >= 0.4 AND ds.min_eff < 0.5 THEN round((1 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                            WHEN ds.min_eff >= 0.5 AND ds.min_eff < 0.6 THEN round((1.5 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                            WHEN ds.min_eff >= 0.6 THEN round((2.25 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                        END
-                WHEN ds."Prediction minutes" > 3840
-                    THEN
-                        CASE
-                            WHEN ds.min_eff >= 0.25 AND ds.min_eff < 0.35 THEN round((0.75 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                            WHEN ds.min_eff >= 0.35 AND ds.min_eff < 0.4 THEN round((1 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                            WHEN ds.min_eff >= 0.4 AND ds.min_eff < 0.5 THEN round((1.5 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                            WHEN ds.min_eff >= 0.5 AND ds.min_eff < 0.6 THEN round((2 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                            WHEN ds.min_eff >= 0.6 THEN round((2.5 * ds."Prediction minutes" / 60)::NUMERIC, 2)
-                        END
-                ELSE 0
-            END AS bonus
-        FROM 
-            (SELECT 
-                ds.*,
-                CASE
-                    WHEN ds."nomer_decada" IN (1,2) THEN 
-                        CASE 
-                            WHEN CURRENT_DATE - ds."decade" > 10 THEN ds."Actual duration (hours)" * 60
-                            ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."decade", 1) * 10
-                        END
-                    WHEN ds."nomer_decada" IN (3) THEN
-                        CASE 
-                            WHEN EXTRACT(MONTH FROM ds."decade") IN (1,3,5,7,8,10,12) THEN 
-                                CASE
-                                    WHEN CURRENT_DATE - ds."decade" > 11 THEN ds."Actual duration (hours)" * 60
-                                    ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."decade", 1) * ds."kol_vo_dney_3_decada"
-                                END
-                            WHEN EXTRACT(MONTH FROM ds."decade") IN (4,6,9,11) THEN 
-                                CASE 
-                                    WHEN CURRENT_DATE - ds."decade" > 10 THEN ds."Actual duration (hours)" * 60
-                                    ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."decade", 1) * ds."kol_vo_dney_3_decada"
-                                END
-                            WHEN EXTRACT(MONTH FROM ds."decade") IN (2) THEN 
-                                CASE 
-                                    WHEN CURRENT_DATE - ds."decade" > 8 THEN ds."Actual duration (hours)" * 60
-                                    ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."decade", 1) * ds."kol_vo_dney_3_decada"
-                                END
-                        END
-                END AS "Prediction minutes"
-            FROM 
-                (
-                SELECT
-                    ds."month",
-                    ds."decade", 
-                    ds."nomer_decada", 
-                    ds."kol_vo_dney_3_decada", 
-                    ds."Worker id", 
-                    ds."Nickname",
-                    SUM(ds."Actual duration (hours)") * 60 AS "Actual minutes",
-                    SUM(ds."Actual duration (hours)") AS "Actual duration (hours)",
-                    ROUND((SUM(ds."Minutes") / NULLIF(SUM(ds."Actual duration (hours)"), 0))::numeric / 60, 2) AS "min_eff"
-                FROM 
-                    (
-                    SELECT
-                        date_trunc('month', ds."Date") :: date AS "month",
-                        ds.*,
-                        (CONCAT(EXTRACT(YEAR FROM "Date"), '-', 
-                                EXTRACT(MONTH FROM "Date"), '-', 
-                                CASE 
-                                    WHEN EXTRACT(DAY FROM "Date") <= 10 THEN 1
-                                    WHEN EXTRACT(DAY FROM "Date") <= 20 THEN 11
-                                    ELSE 21
-                                END	
-                        )) :: date AS decade,
-                        CASE 
-                            WHEN EXTRACT(DAY FROM "Date") <= 10 THEN 1
-                            WHEN EXTRACT(DAY FROM "Date") <= 20 THEN 2
-                            WHEN EXTRACT(DAY FROM "Date") <= 31 THEN 3
-                        END AS "nomer_decada",
-                        CASE
-                            WHEN EXTRACT(MONTH FROM "Date") IN (1,3,5,7,8,10,12) THEN 11
-                            WHEN EXTRACT(MONTH FROM "Date") IN (4,6,9,11) THEN 10
-                            ELSE 8
-                        END AS "kol_vo_dney_3_decada"
-                    FROM public.daily_shifts ds
-                    WHERE "Date" >= '2025-08-01'
-                    ) ds
-                GROUP BY ds."month", ds."decade", ds."nomer_decada", ds."kol_vo_dney_3_decada", ds."Worker id", ds."Nickname"
-                ) ds
-            ORDER BY ds."decade", ds."Nickname") ds
-    '''
-
-    df_decades_bonus_temp = pd.read_sql(select_decades_bonus, engine_postgresql).fillna(0)
-    df_decades_bonus = df_decades_bonus_temp.pivot_table(index=['Месяц', 'Worker id', 'Worker nickname'],
-                                                         columns='nomer_decada',
-                                                         values='bonus') \
-        .reset_index().fillna(0) \
-        .rename(columns={1: 'Бонус за 1 декаду',
-                         2: 'Бонус за 2 декаду',
-                         3: 'Бонус за 3 декаду'})
-    df_decades_bonus['Месяц'] = pd.to_datetime(df_decades_bonus['Месяц'], errors='coerce')
-    df1 = df.merge(df_decades_bonus, on=['Месяц', 'Worker id', 'Worker nickname'], how='left')
-
-    # Бонусы за месяц
-    select_month_bonus = '''
-        SELECT 
-            ds."month" AS "Месяц",
-            ds."Worker id",
-            ds."Nickname" AS "Worker nickname",
-            -- ds."rn",
-            CASE 
-                WHEN ds."rn" = 1 THEN 100
-                WHEN ds."rn" = 2 THEN 75
-                WHEN ds."rn" IN (3,4,5) THEN 50
-            END AS "Бонус за месяц"
-        FROM
-            (
+        # Выгрузка для Каждый работник
+        select_for_workers = '''
             SELECT 
-                ds.*,
-                rank() OVER (PARTITION BY ds."month" ORDER BY ds."min_eff" DESC) AS rn
+                date_trunc('month', grg."Date")::date AS "Месяц",
+                grg.* ,
+                EXTRACT(EPOCH FROM (grg."Actual finish time" - grg."Actual start time"))::int AS "Actual working seconds"
+            FROM  
+            (
+                SELECT
+                    grg."Date"::date ,
+                    grg."Worker id"::int ,
+                    grg."Worker username" ,
+                    grg."Worker nickname" ,
+                    to_timestamp(concat(grg."Date", ' ', grg."Actual start time"), 'YYYY-MM-DD HH24:MI:SS') AS "Actual start time" ,
+                    CASE 
+                        WHEN grg."Actual start time" < grg."Actual finish time" THEN to_timestamp(concat(grg."Date", ' ', grg."Actual finish time"), 'YYYY-MM-DD HH24:MI:SS')
+                        ELSE to_timestamp(concat(grg."Date", ' ', grg."Actual finish time"), 'YYYY-MM-DD HH24:MI:SS') + interval '1 day'
+                    END  AS "Actual finish time" ,
+                    grg."Finish odometer kilometers"::float - grg."Start odometer kilometers"::float AS distance
+                FROM damir.grafik_rabot_google grg 
+                WHERE grg."Actual start time" != '00:00:70'
+                    AND grg."Actual finish time" != '00:00:70'
+                    AND grg."Date" >= '2025-08-01'
+                ) AS grg
+        '''
+        df_for_workers = pd.read_sql(select_for_workers, engine_postgresql)
+        df_for_workers['Месяц'] = pd.to_datetime(df_for_workers['Месяц'], errors='coerce')
+
+        # Скачиваю Таблица(ставки)
+        RANGE_NAME_2 = 'Таблица(ставки)!A:BF'
+        sheets_service = get_sheets_service(SERVICE_ACCOUNT_FILE)
+        df_tabl_stavki = read_sheet_data_to_pandas(sheets_service, SPREADSHEET_ID, RANGE_NAME_2)
+
+        new_columns = df_tabl_stavki.iloc[0]
+        df_tabl_stavki.columns = new_columns
+        df_tabl_stavki.drop(index=df_tabl_stavki.index[0], axis=0, inplace=True)
+        df_tabl_stavki = df_tabl_stavki[df_tabl_stavki['Месяц'].notna()]
+        df_tabl_stavki['Месяц'] = pd.to_datetime(df_tabl_stavki['Месяц'], errors='coerce')
+        df_tabl_stavki['Дата нового условия ставки (час)'] = pd.to_datetime(
+            df_tabl_stavki['Дата нового условия ставки (час)'], errors='coerce').replace('1970-01-01', 'NaT')
+        df_tabl_stavki['Дата нового условия ставки (нед)'] = pd.to_datetime(
+            df_tabl_stavki['Дата нового условия ставки (нед)'], errors='coerce').replace('1970-01-01', 'NaT')
+        df_tabl_stavki['Дата нового условия ставки (мес)'] = pd.to_datetime(
+            df_tabl_stavki['Дата нового условия ставки (мес)'], errors='coerce').replace('1970-01-01', 'NaT')
+        df_tabl_stavki['Нач_дата_расч_бонуса_нов_сотр'] = pd.to_datetime(
+            df_tabl_stavki['Нач_дата_расч_бонуса_нов_сотр'], errors='coerce').replace('1970-01-01', 'NaT')
+        df_tabl_stavki['Оконч_дата_расч_бонус_нов_сотр'] = pd.to_datetime(
+            df_tabl_stavki['Оконч_дата_расч_бонус_нов_сотр'], errors='coerce')
+        df_tabl_stavki = df_tabl_stavki.replace('', '0')
+        df_tabl_stavki['Worker id'] = df_tabl_stavki['Worker id'].astype(int)
+        df_tabl_stavki['Количество отработанных часов'] = df_tabl_stavki['Количество отработанных часов'].fillna(0).astype(float)
+        df_tabl_stavki['Ставка за час'] = df_tabl_stavki['Ставка за час'].fillna(0).astype(float)
+        df_tabl_stavki['Ставка измененная за час'] = df_tabl_stavki['Ставка измененная за час'].fillna(0).astype(float)
+        df_tabl_stavki['Ставка за неделю'] = df_tabl_stavki['Ставка за неделю'].fillna(0).astype(float)
+        df_tabl_stavki['Ставка измененная за неделю'] = df_tabl_stavki['Ставка измененная за неделю'].fillna(0).astype(float)
+        df_tabl_stavki['Ставка за месяц'] = df_tabl_stavki['Ставка за месяц'].fillna(0).astype(float)
+        df_tabl_stavki['Норма рабочих часов за месяц'] = df_tabl_stavki['Норма рабочих часов за месяц'].fillna(0).astype(float)
+        df_tabl_stavki['Ставка свыше нормы'] = df_tabl_stavki['Ставка свыше нормы'].fillna(0).astype(float)
+        df_tabl_stavki['Количество отработанных часов свыше нормы'] = df_tabl_stavki[
+            'Количество отработанных часов свыше нормы'].fillna(0).astype(float)
+        df_tabl_stavki['Ставка измененная за месяц'] = df_tabl_stavki['Ставка измененная за месяц'].fillna(0).astype(float)
+        df_tabl_stavki['Норма расхода топлива на 100 км, литры'] = df_tabl_stavki[
+            'Норма расхода топлива на 100 км, литры'].fillna(0).astype(float)
+        df_tabl_stavki['Цена топлива за 1 литр, евро'] = df_tabl_stavki['Цена топлива за 1 литр, евро'].fillna(0).astype(float)
+        df_tabl_stavki['Количество часов работы на складе'] = df_tabl_stavki['Количество часов работы на складе'].fillna(0).astype(
+            float)
+        df_tabl_stavki['Бонус за работу на складе'] = df_tabl_stavki['Бонус за работу на складе'].fillna(0).astype(float)
+        df_tabl_stavki['Бонус за ремонт'] = df_tabl_stavki['Бонус за ремонт'].fillna(0).astype(float)
+        df_tabl_stavki['Общее количество заряженных батарей'] = df_tabl_stavki[
+            'Общее количество заряженных батарей'].replace('-', '0').fillna(0).astype(float)
+        df_tabl_stavki['Сумма1'] = df_tabl_stavki['Сумма1'].fillna(0).astype(float)
+        df_tabl_stavki['Сумма2'] = df_tabl_stavki['Сумма2'].fillna(0).astype(float)
+        df_tabl_stavki['Сумма3'] = df_tabl_stavki['Сумма3'].fillna(0).astype(float)
+        df_tabl_stavki['Сумма4'] = df_tabl_stavki['Сумма4'].fillna(0).astype(float)
+        df_tabl_stavki['Сумма5'] = df_tabl_stavki['Сумма5'].fillna(0).astype(float)
+        df_tabl_stavki['Сумма6'] = df_tabl_stavki['Сумма6'].fillna(0).astype(float)
+        df_tabl_stavki['Сумма7'] = df_tabl_stavki['Сумма7'].fillna(0).astype(float)
+        df_tabl_stavki['Штраф'] = df_tabl_stavki['Штраф'].fillna(0).astype(float)
+        df_tabl_stavki['Аванс'] = df_tabl_stavki['Аванс'].fillna(0).astype(float)
+        df_tabl_stavki['Сумма8'] = df_tabl_stavki['Сумма8'].fillna(0).astype(float)
+        df_tabl_stavki['Сумма9'] = df_tabl_stavki['Сумма9'].fillna(0).astype(float)
+        df_tabl_stavki['Сумма10'] = df_tabl_stavki['Сумма10'].fillna(0).astype(float)
+        df_tabl_stavki['Процент_от_зп_бонус_прогр'] = df_tabl_stavki[
+            'Процент_от_зп_бонус_прогр'].fillna(0).astype(float)
+        df_tabl_stavki['id_invited_worker_nickname_бонусная_программа'] = df_tabl_stavki[
+            'id_invited_worker_nickname_бонусная_программа'].fillna(0).astype(int)
+        df_for_workers_distance = df_for_workers.groupby(['Месяц', 'Worker id', 'Worker username', 'Worker nickname'],
+                                                         as_index=False) \
+            .agg({'distance': 'sum'})
+
+        df_temp = df_tabl_stavki.merge(df_for_workers_distance,
+                                       how='left', on=['Месяц', 'Worker id', 'Worker username', 'Worker nickname'])
+        df_temp['Компенсация топлива'] = df_temp['Норма расхода топлива на 100 км, литры'] * df_temp['distance'] * df_temp[
+            'Цена топлива за 1 литр, евро'] / 100
+        df_temp['Зарядка АКБ'] = df_temp['Общее количество заряженных батарей'] * 0.2
+        df_temp['Работа на складе'] = df_temp['Количество часов работы на складе'] * df_temp['Ставка за час']
+        df_temp['Возмещаемые расходы'] = df_temp['Сумма1'] + df_temp['Сумма2'] + df_temp['Сумма3']
+        df_temp['Офиц_зп'] = df_temp['Сумма4'] + df_temp['Сумма5'] + df_temp['Сумма6'] + df_temp['Сумма7']
+        df_temp['Кол-во дней для расчета бонуса'] = (df_temp['Оконч_дата_расч_бонус_нов_сотр'] - df_temp[
+            'Нач_дата_расч_бонуса_нов_сотр']) / pd.Timedelta(days=1)
+        # df_temp['Бонус приведи друга'] = df_temp['Кол-во дней для расчета бонуса'] * 5 * df_temp[
+        #     'Процент от зарплаты, % (бонусная программа)'] / 100
+        df_temp['Бонус приведи друга'] = df_temp['Кол-во дней для расчета бонуса'].fillna(0) * 5 * df_temp[
+            'Процент_от_зп_бонус_прогр'].fillna(0).astype(float) / 100
+        df_temp['Всего удержано'] = df_temp['Сумма8'].fillna(0) + df_temp['Сумма9'].fillna(0) + df_temp['Сумма10'].fillna(0)
+        df_temp['Конец месяца'] = df_temp['Месяц'] + pd.tseries.offsets.MonthEnd()
+
+        # Проверка вида ставки
+        def type_stavka(df):
+            if df['Ставка за час'] != 0:
+                return 'Ставка за час'
+            elif df['Ставка за неделю'] != 0:
+                return 'Ставка за неделю'
+            elif df['Ставка за месяц'] != 0:
+                return 'Ставка за месяц'
+            else:
+                return None
+
+        df_temp['Тип ставки'] = df_temp.apply(type_stavka, axis=1)
+
+        # Обработка столбцов Ставка за час
+        # По дням расписываю работников
+        df_temp['Ставка за час постоянно'] = df_temp['Дата нового условия ставки (час)'].fillna(0).apply(
+            lambda x: 0 if x == 0 else 1)
+
+        columns = ['Date', 'Worker id', 'Ставка за час']
+        res = pd.DataFrame(columns=columns)
+
+        columns_month = ['Месяц', 'Worker id']
+        res_month = pd.DataFrame(columns=columns_month)
+
+        for index, row in df_temp.iterrows():
+
+            if (row['Ставка за час постоянно'] == 0) & (row['Тип ставки'] == 'Ставка за час'):
+                #         print('Постоянно')
+                dates1 = pd.date_range(start=row['Месяц'], end=row['Конец месяца'], freq='D')
+                df1 = pd.DataFrame(dates1, columns=['Date'])
+                df1['Ставка за час'] = row['Ставка за час']
+                df1['Worker id'] = row['Worker id']
+                df1['Worker username'] = row['Worker username']
+                df1['Worker nickname'] = row['Worker nickname']
+                df1['Worker role'] = row['Worker role']
+                df1['city'] = row['city']
+                res = pd.concat([res, df1], ignore_index=True)
+
+            elif (row['Ставка за час постоянно'] == 1) & (row['Тип ставки'] == 'Ставка за час'):
+                #         print('Не постоянно')
+                # Диапазон до изменения ставки
+                dates1 = pd.date_range(start=row['Месяц'],
+                                       end=row['Дата нового условия ставки (час)'] - pd.Timedelta(hours=1), freq='D')
+                df1 = pd.DataFrame(dates1, columns=['Date'])
+                df1['Ставка за час'] = row['Ставка за час']
+                df1['Worker id'] = row['Worker id']
+                df1['Worker username'] = row['Worker username']
+                df1['Worker nickname'] = row['Worker nickname']
+                df1['Worker role'] = row['Worker role']
+                df1['city'] = row['city']
+                df1['Посменная зп'] = 0
+
+                # Диапазон после изменения ставки
+                dates2 = pd.date_range(start=row['Дата нового условия ставки (час)'], end=row['Конец месяца'], freq='D')
+                df2 = pd.DataFrame(dates2, columns=['Date'])
+                df2['Ставка за час'] = row['Ставка измененная за час']
+                df2['Worker id'] = row['Worker id']
+                df2['Worker username'] = row['Worker username']
+                df2['Worker nickname'] = row['Worker nickname']
+                df2['Worker role'] = row['Worker role']
+                df2['city'] = row['city']
+                df2['Посменная зп'] = 0
+                res = pd.concat([res, df1, df2], ignore_index=True)
+            elif row['Тип ставки'] == 'Ставка за месяц':
+                dates3 = pd.date_range(start=row['Месяц'], end=row['Месяц'], freq='D')
+                df3 = pd.DataFrame(dates3, columns=['Месяц'])
+                df3['Worker id'] = row['Worker id']
+                df3['Worker username'] = row['Worker username']
+                df3['Worker nickname'] = row['Worker nickname']
+                df3['Worker role'] = row['Worker role']
+                df3['city'] = row['city']
+                res_month = pd.concat([res_month, df3], ignore_index=True)
+                res_month['Сдельная зп'] = 0
+                res_month['Посменная зп'] = row['Ставка за месяц']
+
+        res_month['Месяц'] = pd.to_datetime(res_month['Месяц'], errors='coerce')
+
+        # Работаю для Христоса
+        # Удаляю Христоса
+        res = res.drop(res[res['Worker id'] == 35].index)
+
+        res['Месяц'] = res['Date'].apply(lambda x: x.strftime('%Y-%m-01'))
+        res['Месяц'] = pd.to_datetime(res['Месяц'], errors='coerce')
+        res['Date'] = pd.to_datetime(res['Date'], errors='coerce')
+        res['Ставка за час'] = res['Ставка за час'].astype(float)
+        res['Worker id'] = res['Worker id'].astype(int)
+
+        # Выгрузка Ставка за час для Христоса
+        select_min_efficiency = '''
+            SELECT
+                ds."Date",
+                ds."Worker id",
+                ds."Nickname" AS "Worker nickname",
+                CASE 
+                    WHEN COALESCE( SUM(ds."Minutes") / NULLIF(SUM(ds."Actual duration (hours)" ), 0) / 60, 0) < 0.36 THEN 5
+                    ELSE 6
+                END AS "Ставка за час"
+            FROM public.daily_shifts ds
+            WHERE ds."Date" >= '2025-08-01' AND ds."Worker id" = 35
+            GROUP BY ds."Date", ds."Worker id", ds."Nickname"
+        '''
+
+        df_c = pd.read_sql(select_min_efficiency, engine_postgresql)
+        df_c['Date'] = pd.to_datetime(df_c['Date'], errors='coerce')
+
+        # Генерирую календарь для Христоса
+        columns = ['Date', 'Worker id']
+        res_c = pd.DataFrame(columns=columns)
+
+        for index, row in df_temp[df_temp['Worker id'] == 35].iterrows():
+
+            if (row['Ставка за час постоянно'] == 0) & (row['Тип ставки'] == 'Ставка за час'):
+                #         print('Постоянно')
+
+                dates1 = pd.date_range(start=row['Месяц'], end=row['Конец месяца'], freq='D')
+                df1 = pd.DataFrame(dates1, columns=['Date'])
+                df1['Worker id'] = row['Worker id']
+                df1['Worker username'] = row['Worker username']
+                df1['Worker nickname'] = row['Worker nickname']
+                df1['Worker role'] = row['Worker role']
+                df1['city'] = row['city']
+                res_c = pd.concat([res_c, df1], ignore_index=True)
+
+            elif (row['Ставка за час постоянно'] == 1) & (row['Тип ставки'] == 'Ставка за час'):
+                #         print('Не постоянно')
+                # Диапазон до изменения ставки
+                dates1 = pd.date_range(start=row['Месяц'],
+                                       end=row['Дата нового условия ставки (час)'] - pd.Timedelta(hours=1), freq='D')
+                df1 = pd.DataFrame(dates1, columns=['Date'])
+                df1['Worker id'] = row['Worker id']
+                df1['Worker username'] = row['Worker username']
+                df1['Worker nickname'] = row['Worker nickname']
+                df1['Worker role'] = row['Worker role']
+                df1['city'] = row['city']
+                df1['Посменная зп'] = 0
+
+                # Диапазон после изменения ставки
+                dates2 = pd.date_range(start=row['Дата нового условия ставки (час)'], end=row['Конец месяца'], freq='D')
+                df2 = pd.DataFrame(dates2, columns=['Date'])
+                df2['Worker id'] = row['Worker id']
+                df2['Worker username'] = row['Worker username']
+                df2['Worker nickname'] = row['Worker nickname']
+                df2['Worker role'] = row['Worker role']
+                df2['city'] = row['city']
+                df2['Посменная зп'] = 0
+                res_c = pd.concat([res_c, df1, df2], ignore_index=True)
+
+        res_c['Месяц'] = res_c['Date'].apply(lambda x: x.strftime('%Y-%m-01'))
+        res_c['Месяц'] = pd.to_datetime(res_c['Месяц'], errors='coerce')
+        res_c['Date'] = pd.to_datetime(res_c['Date'], errors='coerce')
+        res_c['Worker id'] = res_c['Worker id'].astype(int)
+        res_c['Посменная зп'] = 0
+
+        res_c = res_c.merge(df_c, on=['Date', 'Worker id', 'Worker nickname'])
+        res = pd.concat([res, res_c])
+
+        df_for_workers['Date'] = pd.to_datetime(df_for_workers['Date'])
+        res['Date'] = pd.to_datetime(res['Date'])
+
+        # Учет дат выезда_. Начало
+        df_vyezd = df_tabl_stavki[['Месяц', 'Worker id',
+                                   'Ставка за выезд в другие города', 'Дата выезда 1',
+                                   'Дата выезда 2', 'Дата выезда3', 'Дата выезда4', 'Дата выезда5']]
+
+        df_vyezd = df_vyezd[df_vyezd['Ставка за выезд в другие города'].notna()]
+        df_vyezd['Ставка за выезд в другие города'] = df_vyezd['Ставка за выезд в другие города'].astype(float)
+        df_vyezd['Дата выезда 1'] = pd.to_datetime(df_vyezd['Дата выезда 1'], errors='coerce')
+        df_vyezd['Дата выезда 2'] = pd.to_datetime(df_vyezd['Дата выезда 2'], errors='coerce')
+        df_vyezd['Дата выезда3'] = pd.to_datetime(df_vyezd['Дата выезда3'], errors='coerce')
+        df_vyezd['Дата выезда4'] = pd.to_datetime(df_vyezd['Дата выезда4'], errors='coerce')
+        df_vyezd['Дата выезда5'] = pd.to_datetime(df_vyezd['Дата выезда5'], errors='coerce')
+
+        for index, row in df_vyezd.iterrows():
+            if not pd.isnull(df_vyezd.loc[index]['Дата выезда 1']):
+                res.loc[(res['Worker id'] == df_vyezd.loc[index]['Worker id']) & \
+                        (res['Date'] == df_vyezd.loc[index]['Дата выезда 1']), 'Ставка за час'] = \
+                    float(df_vyezd.loc[index]['Ставка за выезд в другие города'])
+            if not pd.isnull(df_vyezd.loc[index]['Дата выезда 2']):
+                res.loc[(res['Worker id'] == df_vyezd.loc[index]['Worker id']) & \
+                        (res['Date'] == df_vyezd.loc[index]['Дата выезда 2']), 'Ставка за час'] = \
+                    float(df_vyezd.loc[index]['Ставка за выезд в другие города'])
+            if not pd.isnull(df_vyezd.loc[index]['Дата выезда3']):
+                res.loc[(res['Worker id'] == df_vyezd.loc[index]['Worker id']) & \
+                        (res['Date'] == df_vyezd.loc[index]['Дата выезда3']), 'Ставка за час'] = \
+                    float(df_vyezd.loc[index]['Ставка за выезд в другие города'])
+            if not pd.isnull(df_vyezd.loc[index]['Дата выезда4']):
+                res.loc[(res['Worker id'] == df_vyezd.loc[index]['Worker id']) & \
+                        (res['Date'] == df_vyezd.loc[index]['Дата выезда4']), 'Ставка за час'] = \
+                    float(df_vyezd.loc[index]['Ставка за выезд в другие города'])
+            if not pd.isnull(df_vyezd.loc[index]['Дата выезда5']):
+                res.loc[(res['Worker id'] == df_vyezd.loc[index]['Worker id']) & \
+                        (res['Date'] == df_vyezd.loc[index]['Дата выезда5']), 'Ставка за час'] = \
+                    float(df_vyezd.loc[index]['Ставка за выезд в другие города'])
+
+        res = df_for_workers.merge(res, on=['Месяц', 'Date', 'Worker id', 'Worker username', 'Worker nickname'], how='left')
+        res['Сдельная зп'] = res['Ставка за час'] * res['Actual working seconds'] / 3600
+
+        res_workers_month = res.groupby(['Месяц', 'Worker id', 'Worker username', 'Worker nickname', 'Worker role', 'city']) \
+            .agg({'Actual working seconds': 'sum',
+                  'Сдельная зп': 'sum', 'Посменная зп': 'sum'}) \
+            .reset_index()
+        res_month['Actual worked seconds'] = 0
+        res_month['Сдельная зп'] = res_month['Сдельная зп'].astype(float)
+        res_month['Actual worked seconds'] = res_month['Actual worked seconds'].astype(float)
+        res_month['Worker id'] = res_month['Worker id'].astype(int)
+        res_month['Date'] = res_month['Месяц']
+        res_month['Actual start time'] = res_month['Месяц']
+        res_month['Actual finish time'] = res_month['Месяц']
+
+
+        df_zp = pd.concat([res, res_month]).fillna(0)
+
+        res_for_workers = df_zp[['Месяц', 'Date', 'Worker id', 'Worker username', 'Worker nickname',
+                                 'Actual start time', 'Actual finish time', 'distance',
+                                 'Actual working seconds', 'Ставка за час']]
+
+        # Очистка таблицы
+        truncate_t_bike = "TRUNCATE TABLE salary_outer_1 RESTART IDENTITY;"
+        with engine_postgresql.connect() as connection:
+            with connection.begin() as transaction:
+                print(f"Попытка очистить таблицу")
+                # Очистка salary_inner
+                connection.execute(sa.text(truncate_t_bike))
+                # Если ошибок нет, транзакция фиксируется автоматически
+                print(f"Таблица salary_outer_1 успешно очищена!")
+
+        res_for_workers.to_sql("salary_outer_1", engine_postgresql, if_exists="append", index=False)
+        print('Таблица salary_outer_1 успешно обновлена!')
+
+        df_zp_month = df_zp.groupby(['Месяц', 'Worker id', 'Worker username', 'Worker nickname'], as_index=False) \
+            .agg({'distance': 'sum',
+                  'Actual working seconds': 'sum',
+                  'Посменная зп': 'sum',
+                  'Сдельная зп': 'sum',
+                  'Actual worked seconds': 'sum'})
+
+        df = df_zp_month.merge(df_temp,
+                               on=['Месяц', 'Worker id', 'Worker username', 'Worker nickname'],
+                               how='right')
+        df = df[['Месяц', 'Worker id', 'Worker username', 'Worker nickname',
+                 'Worker role', 'city', 'Сдельная зп', 'Посменная зп',
+                 'Компенсация топлива', 'Зарядка АКБ', 'Работа на складе',
+                 'Бонус за работу на складе', 'Бонус за ремонт', 'Возмещаемые расходы',
+                 'Бонус приведи друга', 'Штраф', 'Аванс', 'Всего удержано', 'Офиц_зп',
+                 'Actual working seconds',
+                 'Actual worked seconds',
+                 'Количество отработанных часов', 'Ставка за час',
+                 'Ставка измененная за час', 'Дата нового условия ставки (час)',
+                 'Ставка за неделю', 'Ставка измененная за неделю',
+                 'Дата нового условия ставки (нед)', 'Ставка за месяц',
+                 'Норма рабочих часов за месяц', 'Ставка свыше нормы',
+                 'Количество отработанных часов свыше нормы',
+                 'Ставка измененная за месяц', 'Дата нового условия ставки (мес)',
+                 'Норма расхода топлива на 100 км, литры',
+                 'Цена топлива за 1 литр, евро', 'Количество часов работы на складе',
+                 'Общее количество заряженных батарей', 'Сумма1', 'Возмещаемые расходы1',
+                 'Сумма2', 'Возмещаемые расходы2', 'Сумма3', 'Возмещаемые расходы3',
+                 'Сумма4', 'официальная зп 1', 'Сумма5', 'официальная зп 2', 'Сумма6',
+                 'официальная зп 3', 'Сумма7', 'официальная зп 4',
+                 'Сумма8', 'Удерживаемые расходы1', 'Сумма9', 'Удерживаемые расходы2',
+                 'Сумма10', 'Удерживаемые расходы3',
+                 'id_invited_worker_nickname_бонусная_программа',
+                 'invited_worker_nickname_бонусная_программа',
+                 'Процент_от_зп_бонус_прогр',
+                 'Нач_дата_расч_бонуса_нов_сотр',
+                 'Оконч_дата_расч_бонус_нов_сотр',
+                 'Кол-во дней для расчета бонуса',
+                 'Конец месяца', 'Тип ставки',
+                 'Ставка за час постоянно']]
+
+        df['Дата нового условия ставки (час)'] = df['Дата нового условия ставки (час)'].fillna(df['Месяц'])
+        df['Дата нового условия ставки (нед)'] = df['Дата нового условия ставки (нед)'].fillna(df['Месяц'])
+        df['Дата нового условия ставки (мес)'] = df['Дата нового условия ставки (мес)'].fillna(df['Месяц'])
+        df['Нач_дата_расч_бонуса_нов_сотр'] = df['Нач_дата_расч_бонуса_нов_сотр'].fillna(df['Месяц'])
+        df['Оконч_дата_расч_бонус_нов_сотр'] = df['Оконч_дата_расч_бонус_нов_сотр'].fillna(df['Месяц'])
+        df = df.round(2).fillna(0)
+
+        # Бонусы за декады
+        select_decades_bonus = '''
+            SELECT 
+                ds."month" AS "Месяц",
+                ds."decade",
+                ds."nomer_decada",
+                ds."Worker id",
+                ds."Nickname" AS "Worker nickname",
+                CASE
+                    WHEN ds."Prediction minutes" >= 1440 AND ds."Prediction minutes" <= 1920
+                        THEN
+                            CASE
+                                WHEN ds.min_eff >= 0.25 AND ds.min_eff < 0.35 THEN round((0.5 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                                WHEN ds.min_eff >= 0.35 AND ds.min_eff < 0.4 THEN round((0.6 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                                WHEN ds.min_eff >= 0.4 AND ds.min_eff < 0.5 THEN round((0.75 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                                WHEN ds.min_eff >= 0.5 AND ds.min_eff < 0.6 THEN round((1 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                                WHEN ds.min_eff >= 0.6 THEN round((2 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                            END
+                    WHEN ds."Prediction minutes" > 1920 AND ds."Prediction minutes" <= 2880
+                        THEN
+                            CASE
+                                WHEN ds.min_eff >= 0.25 AND ds.min_eff < 0.35 THEN round((0.6 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                                WHEN ds.min_eff >= 0.35 AND ds.min_eff < 0.4 THEN round((0.7 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                                WHEN ds.min_eff >= 0.4 AND ds.min_eff < 0.5 THEN round((1 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                                WHEN ds.min_eff >= 0.5 AND ds.min_eff < 0.6 THEN round((1.25 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                                WHEN ds.min_eff >= 0.6 THEN round((2.1 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                            END
+                    WHEN ds."Prediction minutes" > 2880 AND ds."Prediction minutes" <= 3840
+                        THEN
+                            CASE
+                                WHEN ds.min_eff >= 0.25 AND ds.min_eff < 0.35 THEN round((0.7 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                                WHEN ds.min_eff >= 0.35 AND ds.min_eff < 0.4 THEN round((0.75 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                                WHEN ds.min_eff >= 0.4 AND ds.min_eff < 0.5 THEN round((1 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                                WHEN ds.min_eff >= 0.5 AND ds.min_eff < 0.6 THEN round((1.5 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                                WHEN ds.min_eff >= 0.6 THEN round((2.25 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                            END
+                    WHEN ds."Prediction minutes" > 3840
+                        THEN
+                            CASE
+                                WHEN ds.min_eff >= 0.25 AND ds.min_eff < 0.35 THEN round((0.75 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                                WHEN ds.min_eff >= 0.35 AND ds.min_eff < 0.4 THEN round((1 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                                WHEN ds.min_eff >= 0.4 AND ds.min_eff < 0.5 THEN round((1.5 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                                WHEN ds.min_eff >= 0.5 AND ds.min_eff < 0.6 THEN round((2 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                                WHEN ds.min_eff >= 0.6 THEN round((2.5 * ds."Prediction minutes" / 60)::NUMERIC, 2)
+                            END
+                    ELSE 0
+                END AS bonus
             FROM 
                 (SELECT 
                     ds.*,
-                    CASE 
-                        WHEN EXTRACT(MONTH FROM ds."month") IN (1,3,5,7,8,10,12) THEN 
-                            CASE
-                                WHEN CURRENT_DATE - ds."month" > 31 THEN ds."Actual duration (hours)" * 60
-                                ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."month", 1) * ds."kol_vo_dney_month"
-                            END
-                        WHEN EXTRACT(MONTH FROM ds."month") IN (4,6,9,11) THEN 
+                    CASE
+                        WHEN ds."nomer_decada" IN (1,2) THEN 
                             CASE 
-                                WHEN CURRENT_DATE - ds."month" > 30 THEN ds."Actual duration (hours)" * 60
-                                ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."month", 1) * ds."kol_vo_dney_month"
+                                WHEN CURRENT_DATE - ds."decade" > 10 THEN ds."Actual duration (hours)" * 60
+                                ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."decade", 1) * 10
                             END
-                        WHEN EXTRACT(MONTH FROM ds."month") IN (2) THEN 
+                        WHEN ds."nomer_decada" IN (3) THEN
                             CASE 
-                                WHEN CURRENT_DATE - ds."month" > 28 THEN ds."Actual duration (hours)" * 60
-                                ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."month", 1) * ds."kol_vo_dney_month"
+                                WHEN EXTRACT(MONTH FROM ds."decade") IN (1,3,5,7,8,10,12) THEN 
+                                    CASE
+                                        WHEN CURRENT_DATE - ds."decade" > 11 THEN ds."Actual duration (hours)" * 60
+                                        ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."decade", 1) * ds."kol_vo_dney_3_decada"
+                                    END
+                                WHEN EXTRACT(MONTH FROM ds."decade") IN (4,6,9,11) THEN 
+                                    CASE 
+                                        WHEN CURRENT_DATE - ds."decade" > 10 THEN ds."Actual duration (hours)" * 60
+                                        ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."decade", 1) * ds."kol_vo_dney_3_decada"
+                                    END
+                                WHEN EXTRACT(MONTH FROM ds."decade") IN (2) THEN 
+                                    CASE 
+                                        WHEN CURRENT_DATE - ds."decade" > 8 THEN ds."Actual duration (hours)" * 60
+                                        ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."decade", 1) * ds."kol_vo_dney_3_decada"
+                                    END
                             END
                     END AS "Prediction minutes"
                 FROM 
-                    (SELECT 
-                        ds."month", 
-                        ds."kol_vo_dney_month", 
+                    (
+                    SELECT
+                        ds."month",
+                        ds."decade", 
+                        ds."nomer_decada", 
+                        ds."kol_vo_dney_3_decada", 
                         ds."Worker id", 
                         ds."Nickname",
                         SUM(ds."Actual duration (hours)") * 60 AS "Actual minutes",
                         SUM(ds."Actual duration (hours)") AS "Actual duration (hours)",
-                        ROUND((SUM(ds."Minutes") / NULLIF(SUM(ds."Actual duration (hours)"), 0) / 60)::numeric, 2) AS "min_eff"
+                        ROUND((SUM(ds."Minutes") / NULLIF(SUM(ds."Actual duration (hours)"), 0))::numeric / 60, 2) AS "min_eff"
                     FROM 
-                        (SELECT
+                        (
+                        SELECT
                             date_trunc('month', ds."Date") :: date AS "month",
+                            ds.*,
+                            (CONCAT(EXTRACT(YEAR FROM "Date"), '-', 
+                                    EXTRACT(MONTH FROM "Date"), '-', 
+                                    CASE 
+                                        WHEN EXTRACT(DAY FROM "Date") <= 10 THEN 1
+                                        WHEN EXTRACT(DAY FROM "Date") <= 20 THEN 11
+                                        ELSE 21
+                                    END	
+                            )) :: date AS decade,
+                            CASE 
+                                WHEN EXTRACT(DAY FROM "Date") <= 10 THEN 1
+                                WHEN EXTRACT(DAY FROM "Date") <= 20 THEN 2
+                                WHEN EXTRACT(DAY FROM "Date") <= 31 THEN 3
+                            END AS "nomer_decada",
                             CASE
-                                WHEN EXTRACT(MONTH FROM "Date") IN (1,3,5,7,8,10,12) THEN 31
-                                WHEN EXTRACT(MONTH FROM "Date") IN (4,6,9,11) THEN 30
-                                ELSE 28
-                            END AS "kol_vo_dney_month",
-                            ds.*
-                        FROM daily_shifts ds
-                        WHERE "Date" >= '2025-08-01') AS ds
-                    GROUP BY ds."month", ds."kol_vo_dney_month", ds."Worker id", ds."Nickname"
+                                WHEN EXTRACT(MONTH FROM "Date") IN (1,3,5,7,8,10,12) THEN 11
+                                WHEN EXTRACT(MONTH FROM "Date") IN (4,6,9,11) THEN 10
+                                ELSE 8
+                            END AS "kol_vo_dney_3_decada"
+                        FROM public.daily_shifts ds
+                        WHERE "Date" >= '2025-08-01'
+                        ) ds
+                    GROUP BY ds."month", ds."decade", ds."nomer_decada", ds."kol_vo_dney_3_decada", ds."Worker id", ds."Nickname"
                     ) ds
+                ORDER BY ds."decade", ds."Nickname") ds
+        '''
+
+        df_decades_bonus_temp = pd.read_sql(select_decades_bonus, engine_postgresql).fillna(0)
+        df_decades_bonus = df_decades_bonus_temp.pivot_table(index=['Месяц', 'Worker id', 'Worker nickname'],
+                                                             columns='nomer_decada',
+                                                             values='bonus') \
+            .reset_index().fillna(0) \
+            .rename(columns={1: 'Бонус за 1 декаду',
+                             2: 'Бонус за 2 декаду',
+                             3: 'Бонус за 3 декаду'})
+        df_decades_bonus['Месяц'] = pd.to_datetime(df_decades_bonus['Месяц'], errors='coerce')
+        df1 = df.merge(df_decades_bonus, on=['Месяц', 'Worker id', 'Worker nickname'], how='left')
+
+        # Бонусы за месяц
+        select_month_bonus = '''
+            SELECT 
+                ds."month" AS "Месяц",
+                ds."Worker id",
+                ds."Nickname" AS "Worker nickname",
+                -- ds."rn",
+                CASE 
+                    WHEN ds."rn" = 1 THEN 100
+                    WHEN ds."rn" = 2 THEN 75
+                    WHEN ds."rn" IN (3,4,5) THEN 50
+                END AS "Бонус за месяц"
+            FROM
+                (
+                SELECT 
+                    ds.*,
+                    rank() OVER (PARTITION BY ds."month" ORDER BY ds."min_eff" DESC) AS rn
+                FROM 
+                    (SELECT 
+                        ds.*,
+                        CASE 
+                            WHEN EXTRACT(MONTH FROM ds."month") IN (1,3,5,7,8,10,12) THEN 
+                                CASE
+                                    WHEN CURRENT_DATE - ds."month" > 31 THEN ds."Actual duration (hours)" * 60
+                                    ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."month", 1) * ds."kol_vo_dney_month"
+                                END
+                            WHEN EXTRACT(MONTH FROM ds."month") IN (4,6,9,11) THEN 
+                                CASE 
+                                    WHEN CURRENT_DATE - ds."month" > 30 THEN ds."Actual duration (hours)" * 60
+                                    ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."month", 1) * ds."kol_vo_dney_month"
+                                END
+                            WHEN EXTRACT(MONTH FROM ds."month") IN (2) THEN 
+                                CASE 
+                                    WHEN CURRENT_DATE - ds."month" > 28 THEN ds."Actual duration (hours)" * 60
+                                    ELSE ds."Actual duration (hours)" * 60 / GREATEST(CURRENT_DATE - ds."month", 1) * ds."kol_vo_dney_month"
+                                END
+                        END AS "Prediction minutes"
+                    FROM 
+                        (SELECT 
+                            ds."month", 
+                            ds."kol_vo_dney_month", 
+                            ds."Worker id", 
+                            ds."Nickname",
+                            SUM(ds."Actual duration (hours)") * 60 AS "Actual minutes",
+                            SUM(ds."Actual duration (hours)") AS "Actual duration (hours)",
+                            ROUND((SUM(ds."Minutes") / NULLIF(SUM(ds."Actual duration (hours)"), 0) / 60)::numeric, 2) AS "min_eff"
+                        FROM 
+                            (SELECT
+                                date_trunc('month', ds."Date") :: date AS "month",
+                                CASE
+                                    WHEN EXTRACT(MONTH FROM "Date") IN (1,3,5,7,8,10,12) THEN 31
+                                    WHEN EXTRACT(MONTH FROM "Date") IN (4,6,9,11) THEN 30
+                                    ELSE 28
+                                END AS "kol_vo_dney_month",
+                                ds.*
+                            FROM daily_shifts ds
+                            WHERE "Date" >= '2025-08-01') AS ds
+                        GROUP BY ds."month", ds."kol_vo_dney_month", ds."Worker id", ds."Nickname"
+                        ) ds
+                    ) ds
+                WHERE ds."Prediction minutes" > 4000
+                ORDER BY ds."min_eff" DESC
                 ) ds
-            WHERE ds."Prediction minutes" > 4000
-            ORDER BY ds."min_eff" DESC
-            ) ds
-        WHERE rn <= 5
-    '''
+            WHERE rn <= 5
+        '''
 
-    df_month_bonus_temp = pd.read_sql(select_month_bonus, engine_postgresql).fillna(0)
-    df_month_bonus_temp['Месяц'] = pd.to_datetime(df_month_bonus_temp['Месяц'], errors='coerce')
+        df_month_bonus_temp = pd.read_sql(select_month_bonus, engine_postgresql).fillna(0)
+        df_month_bonus_temp['Месяц'] = pd.to_datetime(df_month_bonus_temp['Месяц'], errors='coerce')
 
-    df_res = df1.merge(df_month_bonus_temp, on=['Месяц', 'Worker id', 'Worker nickname'], how='left').fillna(0)
-    df_res['add_time'] = pd.Timestamp.now() + pd.Timedelta(hours=3)
+        df_res = df1.merge(df_month_bonus_temp, on=['Месяц', 'Worker id', 'Worker nickname'], how='left').fillna(0)
+        df_res['add_time'] = pd.Timestamp.now() + pd.Timedelta(hours=3)
 
-    # Очистка таблицы
-    truncate_t_bike = "TRUNCATE TABLE salary_inner RESTART IDENTITY;"
+        # Очистка таблицы
+        truncate_t_bike = "TRUNCATE TABLE salary_inner RESTART IDENTITY;"
 
-    with engine_postgresql.connect() as connection:
-        with connection.begin() as transaction:
-            print(f"Попытка очистить таблицу")
-            # Очистка salary_inner
-            connection.execute(sa.text(truncate_t_bike))
-            # Если ошибок нет, транзакция фиксируется автоматически
-            print(f"Таблица salary_inner успешно очищена!")
+        with engine_postgresql.connect() as connection:
+            with connection.begin() as transaction:
+                print(f"Попытка очистить таблицу")
+                # Очистка salary_inner
+                connection.execute(sa.text(truncate_t_bike))
+                # Если ошибок нет, транзакция фиксируется автоматически
+                print(f"Таблица salary_inner успешно очищена!")
 
-    df_res.to_sql("salary_inner", engine_postgresql, if_exists="append", index=False)
-    print('Таблица salary_inner успешно обновлена!')
+        df_res.to_sql("salary_inner", engine_postgresql, if_exists="append", index=False)
+        print('Таблица salary_inner успешно обновлена!')
 
-    # Расчет зп. Конец 30.09.2025
-
+        # Расчет зп. Конец 30.09.2025
+    except Exception as e:
+        print(f"Произошла ошибка в ЗП: {e}")
+        pass
 if __name__ == "__main__":
     main()

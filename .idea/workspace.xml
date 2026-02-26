@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="Исправления для itogo_sim_for_cities 1">
+    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="Переместил расчет ЗП в конец">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/entrypoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/entrypoint.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -262,7 +263,14 @@
       <option name="project" value="LOCAL" />
       <updated>1771328825954</updated>
     </task>
-    <option name="localTasksCounter" value="28" />
+    <task id="LOCAL-00028" summary="Переместил расчет ЗП в конец">
+      <created>1772097851387</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1772097851387</updated>
+    </task>
+    <option name="localTasksCounter" value="29" />
     <servers />
   </component>
   <component name="Vcs.Log.History.Properties">
@@ -310,6 +318,7 @@
     <MESSAGE value="Исправления для total_cities 1" />
     <MESSAGE value="Исправления для itogo_sim_for_cities" />
     <MESSAGE value="Исправления для itogo_sim_for_cities 1" />
-    <option name="LAST_COMMIT_MESSAGE" value="Исправления для itogo_sim_for_cities 1" />
+    <MESSAGE value="Переместил расчет ЗП в конец" />
+    <option name="LAST_COMMIT_MESSAGE" value="Переместил расчет ЗП в конец" />
   </component>
 </project>
