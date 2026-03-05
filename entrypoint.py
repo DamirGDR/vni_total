@@ -2583,6 +2583,35 @@ def main():
     print('Added {x} records to t_payment_details in Postgres!'.format(x=df_fresh_t_payment_details_mysql.shape[0]))
     #   Обновление таблицы t_payment_details в Postgres. Конец
 
+    #   Обновление таблицы t_audit_user_location в Postgres. Начало
+    # Максимальный id записи в принимающей таблице
+    select_max_id_t_audit_user_location = '''
+        SELECT 
+            MAX(id)
+        FROM damir.t_audit_user_location
+    '''
+
+    df_max_id_t_audit_user_location = pd.read_sql(select_max_id_t_audit_user_location, engine_postgresql)
+    max_id_t_audit_user_location = int(df_max_id_t_audit_user_location.iloc[0].iloc[0])
+
+    select_fresh_t_audit_user_location_mysql = '''
+            SELECT
+                NOW() AS add_time ,
+                t_audit_user_location.*
+            FROM shamri.t_audit_user_location
+            WHERE t_audit_user_location.id > {max_id_t_audit_user_location}
+                    '''.format(max_id_t_audit_user_location=max_id_t_audit_user_location)
+
+    df_fresh_t_audit_user_location_mysql = pd.read_sql(select_fresh_t_audit_user_location_mysql, engine_mysql)
+
+    df_fresh_t_audit_user_location_mysql.replace('', '0').to_sql("t_audit_user_location",
+                                                                 engine_postgresql,
+                                                                 if_exists="append",
+                                                                 index=False)
+    print('Added {x} records to t_audit_user_location in Postgres!'.format(
+        x=df_fresh_t_audit_user_location_mysql.shape[0]))
+    #   Обновление таблицы t_audit_user_location в Postgres. Конец
+
     # История чекапов. Начало
     select_checkups_history = r'''
         WITH work_tab AS (
