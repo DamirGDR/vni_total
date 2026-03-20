@@ -1575,7 +1575,31 @@ def main():
     FROM (
         SELECT
             date(vni_cities.timestamp),
-            vni_cities.*,
+            vni_cities.timestamp,
+            vni_cities.id ,
+            vni_cities.name ,
+            vni_cities.poezdok ,
+            vni_cities.poezdok_v_srednem_na_samokat ,
+            vni_cities.vyruchka_sim ,
+            vni_cities.srednyaa_cena_poezdki ,
+            vni_cities.oplacheno_bonusami ,
+            vni_cities.vyruchka ,
+            vni_cities.vyruchka_bez_bonusov ,
+            vni_cities.vyruchka_s_abonementov ,
+            vni_cities.vyruchka_bez_bonusov_vyruchka_s_abonementov ,
+            vni_cities.vni ,
+            vni_cities.vni_bez_bonusov ,
+            vni_cities.kvt ,
+            vni_cities.user_v_den_register ,
+            vni_cities.user_v_den_obshc ,
+            vni_cities.obcshee_vrmeya_min ,
+            vni_cities.srednyee_vremya_poezdki ,
+            vni_cities.iz_nih_usero_sovershivshih_poezdki_vsego ,
+            vni_cities.kol_vo_poezdok_vsego ,
+            vni_cities.proniknovenie ,
+            vni_cities.poezdok_novyi_user ,
+            vni_cities.rank ,
+            vni_cities.skidka ,
             rank() OVER (PARTITION BY vni_cities.id, date(vni_cities.timestamp) ORDER BY vni_cities.timestamp DESC) AS rank
         FROM vni_cities
         ORDER BY vni_cities."timestamp" DESC
