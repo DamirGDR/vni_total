@@ -1598,7 +1598,6 @@ def main():
             vni_cities.kol_vo_poezdok_vsego ,
             vni_cities.proniknovenie ,
             vni_cities.poezdok_novyi_user ,
-            vni_cities.rank ,
             vni_cities.skidka ,
             rank() OVER (PARTITION BY vni_cities.id, date(vni_cities.timestamp) ORDER BY vni_cities.timestamp DESC) AS rank
         FROM vni_cities

@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="Добавил выгрузку t_audit_user_location в postgres">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/entrypoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/entrypoint.py" afterDir="false" />
-    </list>
+    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="vni_cities_for_graph" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -291,7 +288,14 @@
       <option name="project" value="LOCAL" />
       <updated>1772704322529</updated>
     </task>
-    <option name="localTasksCounter" value="32" />
+    <task id="LOCAL-00032" summary="vni_cities_for_graph">
+      <created>1774015790687</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1774015790687</updated>
+    </task>
+    <option name="localTasksCounter" value="33" />
     <servers />
   </component>
   <component name="Vcs.Log.History.Properties">
@@ -317,7 +321,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Изменил: АКБ, АКБ красные столбцы, try/except в АКБ красные столбцы" />
     <MESSAGE value="Добавил try/except" />
     <MESSAGE value="coalesce в df_fresh_parking_stats1" />
     <MESSAGE value="'Плановое!A1:E18'" />
@@ -342,6 +345,7 @@
     <MESSAGE value="Переместил расчет ЗП в конец try/except" />
     <MESSAGE value="Добавил city_id=30" />
     <MESSAGE value="Добавил выгрузку t_audit_user_location в postgres" />
-    <option name="LAST_COMMIT_MESSAGE" value="Добавил выгрузку t_audit_user_location в postgres" />
+    <MESSAGE value="vni_cities_for_graph" />
+    <option name="LAST_COMMIT_MESSAGE" value="vni_cities_for_graph" />
   </component>
 </project>
