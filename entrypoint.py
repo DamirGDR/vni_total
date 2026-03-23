@@ -899,7 +899,7 @@ def main():
                 ROUND(AVG(tcw.current_precipitation)::NUMERIC, 2)::float AS avg_precipitation
             FROM damir.t_cities_weather tcw 
             --WHERE tcw.add_time > NOW()::date  
-            WHERE tcw.add_time > (NOW() + INTERVAL '2 hours')::date 
+            WHERE tcw.add_time >= (NOW() + INTERVAL '2 hours')::date 
             GROUP BY tcw.city_id
         '''
         df_avg_cities_weather = pd.read_sql(select_avg_cities_weather, engine_postgresql)
