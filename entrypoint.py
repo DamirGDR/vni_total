@@ -889,6 +889,24 @@ def main():
         '''
 
         df_cities = pd.read_sql(select_vni_cities, engine_mysql)
+
+        # Средняя погода за сегодня
+        select_avg_cities_weather = '''
+            SELECT 
+                tcw.city_id AS id ,
+                ROUND(AVG(tcw.current_temperature_2m)::NUMERIC, 2)::float AS avg_temperature_2m ,
+                ROUND(AVG(tcw.current_relative_humidity_2m)::NUMERIC, 2)::float AS avg_relative_humidity_2m,
+                ROUND(AVG(tcw.current_precipitation)::NUMERIC, 2)::float AS avg_precipitation
+            FROM damir.t_cities_weather tcw 
+            --WHERE tcw.add_time > NOW()::date  
+            WHERE tcw.add_time > (NOW() + INTERVAL '2 hours')::date 
+            GROUP BY tcw.city_id
+        '''
+        df_avg_cities_weather = pd.read_sql(select_avg_cities_weather, engine_postgresql)
+
+        # Соединяю ВНИ и погоду
+        df_cities = df_cities.merge(df_avg_cities_weather, how='left', on='id').fillna(0)
+
         df_cities.to_sql("vni_cities", engine_postgresql, if_exists="append", index=False)
         print('Got it: VNI_cities')
 
@@ -1101,7 +1119,7 @@ def main():
 
         df1_all = pd.read_sql(select_df1_all, engine_mysql)
 
-        list_cities = [13, 15, 18, 16, 17, 19, 20, 21, 22, 25, 28, 29, 14, 32, 31, 33, 30]
+        list_cities = [13, 15, 18, 16, 17, 19, 20, 21, 22, 25, 28, 29, 14, 32, 31, 33, 30, 35, 34]
         list_stocks = [11, 12]
 
         df1_all = df1_all.loc[df1_all['city_id'].isin(list_cities + list_stocks)]
