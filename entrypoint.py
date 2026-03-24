@@ -895,8 +895,14 @@ def main():
             SELECT 
                 tcw.city_id AS id ,
                 ROUND(AVG(tcw.current_temperature_2m)::NUMERIC, 2)::float AS avg_temperature_2m ,
-                ROUND(AVG(tcw.current_relative_humidity_2m)::NUMERIC, 2)::float AS avg_relative_humidity_2m,
-                ROUND(AVG(tcw.current_precipitation)::NUMERIC, 2)::float AS avg_precipitation
+                ROUND(AVG(tcw.current_relative_humidity_2m)::NUMERIC, 2)::float AS avg_relative_humidity_2m ,
+                ROUND(AVG(tcw.current_precipitation)::NUMERIC, 2)::float AS avg_precipitation ,
+                COALESCE(ROUND((AVG(tcw.current_temperature_2m) FILTER 
+    	            (WHERE (EXTRACT(HOUR FROM (NOW() + INTERVAL '2 hours')) >= 6 
+    		            AND EXTRACT(HOUR FROM tcw.add_time) IN (6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22) )))::NUMERIC, 2)::float, 0) AS avg_temperature_2m_6_22 ,
+                COALESCE(ROUND((AVG(tcw.current_temperature_2m) FILTER 
+    	            (WHERE (EXTRACT(HOUR FROM (NOW() + INTERVAL '2 hours')) >= 22 
+    		            AND EXTRACT(HOUR FROM tcw.add_time) IN (23,0,1,2,3,4,5) )))::NUMERIC, 2)::float, 0) AS avg_temperature_2m_22_6
             FROM damir.t_cities_weather tcw 
             --WHERE tcw.add_time > NOW()::date  
             WHERE tcw.add_time >= (NOW() + INTERVAL '2 hours')::date 
