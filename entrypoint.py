@@ -4221,6 +4221,88 @@ def main():
     df_t_area_revenue_stats1.to_sql("t_area_revenue_stats1", engine_postgresql, if_exists="append", index=False)
     print('Таблица t_area_revenue_stats1 успешно обновлена!')
 
+    # Выгрузка гугл таблиц(Workers_city_role и График работ) в БД для alarms_5. Начало
+
+
+    google_service_account_json = get_google_creds()
+
+    with open('google_json.json', 'w') as fp:
+        json.dump(json.loads(google_service_account_json, strict=False), fp)
+    generated_json_file = './google_json.json'
+    SERVICE_ACCOUNT_FILE = './google_json.json'
+    service_account_file = generated_json_file
+
+
+    # Выгрузка из Workers_city_role из гугла
+    # Выгрузка Workers_city_role
+    try:
+        sheets_service = get_sheets_service(SERVICE_ACCOUNT_FILE)
+        SPREADSHEET_ID = '1dSOV9X2FV3mnOmnwWvTMJuCCZ-tVBf64DP90k3EYD90'
+        RANGE_NAME = 'Workers_city_role!A:E'
+
+        df_workers_city_role = read_sheet_data_to_pandas(sheets_service, SPREADSHEET_ID, RANGE_NAME)
+
+        df_workers_city_role = df_workers_city_role.fillna('0').replace('', '0')
+        df_workers_city_role['add_time'] = pd.Timestamp.now() + pd.Timedelta(hours=3)
+
+        # Очистка таблицы
+        truncate_t_bike = "TRUNCATE TABLE damir.workers_city_role RESTART IDENTITY;"
+        with engine_postgresql.connect() as connection:
+            with connection.begin() as transaction:
+                print(f"Попытка очистить таблицу")
+                # Очистка workers_city_role
+                connection.execute(sa.text(truncate_t_bike))
+                # Если ошибок нет, транзакция фиксируется автоматически
+                print(f"Таблица workers_city_role успешно очищена!")
+
+        df_workers_city_role.to_sql("workers_city_role", engine_postgresql, if_exists="append", index=False)
+        print('Таблица workers_city_role успешно обновлена!')
+    except Exception as e:
+        print(f"Произошла ошибка в workers_city_role: {e}")
+        pass
+
+    # Выгрузка График работ из гугла
+    try:
+        SERVICE_ACCOUNT_FILE = './google_json.json'
+        SPREADSHEET_ID = '1dSOV9X2FV3mnOmnwWvTMJuCCZ-tVBf64DP90k3EYD90'
+        RANGE_NAME = 'График работ!A:L'
+        service_account_file = generated_json_file
+
+        df_grafik = read_sheet_data_to_pandas(sheets_service, SPREADSHEET_ID, RANGE_NAME)
+
+        df_grafik['Worker id'] = df_grafik['Worker id'].fillna('0').replace('', '0')
+        df_grafik['Worker username'] = df_grafik['Worker username'].fillna('0').replace('#N/A', '0').replace('', '0')
+        df_grafik['Worker nickname'] = df_grafik['Worker nickname'].fillna('0').replace('#N/A', '0').replace('', '0')
+        df_grafik['Planned start time'] = df_grafik['Planned start time'].fillna('00:00:70').replace('', '00:00:70')
+        df_grafik['Planned finish time'] = df_grafik['Planned finish time'].fillna('00:00:70').replace('', '00:00:70')
+        df_grafik['Actual start time'] = df_grafik['Actual start time'].fillna('00:00:70').replace('', '00:00:70')
+        df_grafik['Actual finish time'] = df_grafik['Actual finish time'].fillna('00:00:70').replace('', '00:00:70')
+        df_grafik['Start odometer kilometers'] = df_grafik['Start odometer kilometers'].fillna('0').replace('', '0')
+        df_grafik['Finish odometer kilometers'] = df_grafik['Finish odometer kilometers'].fillna('0').replace('', '0')
+        df_grafik['Fines (euro)'] = df_grafik['Fines (euro)'].fillna('0').replace('', '0')
+        df_grafik['Note'] = df_grafik['Note'].fillna('0').replace('', '0')
+        df_grafik['add_time'] = pd.Timestamp.now() + pd.Timedelta(hours=3)
+
+        # Очистка таблицы
+        truncate_t_bike = "TRUNCATE TABLE grafik_rabot_google RESTART IDENTITY;"
+        with engine_postgresql.connect() as connection:
+            with connection.begin() as transaction:
+                print(f"Попытка очистить таблицу")
+                # Очистка grafik_rabot_google
+                connection.execute(sa.text(truncate_t_bike))
+                # Если ошибок нет, транзакция фиксируется автоматически
+                print(f"Таблица grafik_rabot_google успешно очищена!")
+
+        df_grafik.to_sql("grafik_rabot_google", engine_postgresql, if_exists="append", index=False)
+        print('Таблица grafik_rabot_google успешно обновлена!')
+    except Exception as e:
+        print(f"Произошла ошибка в grafik_rabot_google: {e}")
+        pass
+
+
+    # Выгрузка гугл таблиц(Workers_city_role и График работ) в БД для ЗП и alarms_5. Конец
+
+
     try:
         # Расчет зп. Начало 30.09.2025
         SERVICE_ACCOUNT_FILE = './google_json.json'
