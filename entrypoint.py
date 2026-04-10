@@ -4064,6 +4064,7 @@ def main():
                 AND ta.active = 1
             ) AS res_tab
         WHERE res_tab.rn = 1
+            AND res_tab.distance <= 15
         GROUP BY date_trunc('hour', res_tab.timestamp), res_tab.city_id , res_tab.parking_id, res_tab.parking_name
         ) AS res
         LEFT JOIN dolgi ON res.city_id = dolgi.city_id
