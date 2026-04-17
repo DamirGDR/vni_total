@@ -1591,6 +1591,19 @@ def main():
     df_t_bike.to_sql("t_bike_history", engine_postgresql, if_exists="append", index=False)
     print('t_bike_history UPDATED!')
 
+    delete_t_bike_history_last_of_day = '''
+        DELETE FROM t_bike_history_last_of_day 
+        WHERE t_bike_history_last_of_day."timestamp"::date = (NOW() AT TIME ZONE 'Europe/Athens')::date
+    '''
+    with engine_postgresql.connect() as connection:
+        with connection.begin() as transaction:
+            connection.execute(sa.text(delete_t_bike_history_last_of_day))
+            transaction.commit()
+            print(f"Таблица t_bike_history_last_of_day успешно очищена!")
+
+    df_t_bike.to_sql("t_bike_history_last_of_day", engine_postgresql, if_exists="append", index=False)
+    print('t_bike_history_last_of_day UPDATED!')
+
     # Выгрузка t_bike_history Конец
 
     # Выгрузка по городам для графиков
