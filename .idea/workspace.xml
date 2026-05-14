@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="Добавил distance &lt;= 15 для Rebalance">
+    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="Добавил t_bike_history_last_of_day">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/entrypoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/entrypoint.py" afterDir="false" />
     </list>
@@ -71,7 +71,7 @@
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;org.jetbrains.plugins.github.ui.GithubSettingsConfigurable&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;ml.llm.LLMConfigurable&quot;,
     &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;
   }
 }</component>
@@ -109,7 +109,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-b63d5a1f7c97-b61e75351b1f-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-261.22158.340" />
+        <option value="bundled-python-sdk-024ed6589d45-c2ffad84badb-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-261.23567.174" />
       </set>
     </attachedChunks>
   </component>
@@ -390,7 +390,15 @@
       <option name="project" value="LOCAL" />
       <updated>1775639972296</updated>
     </task>
-    <option name="localTasksCounter" value="39" />
+    <task id="LOCAL-00039" summary="Добавил t_bike_history_last_of_day">
+      <option name="closed" value="true" />
+      <created>1776417310014</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1776417310014</updated>
+    </task>
+    <option name="localTasksCounter" value="40" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -419,7 +427,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Добавил сломанные АКБ и ремонт АКБ" />
     <MESSAGE value="Отладка АКБ" />
     <MESSAGE value="Исправление Total_cities и складов" />
     <MESSAGE value="Исправление 1" />
@@ -444,6 +451,7 @@
     <MESSAGE value="Добавил температуру за день/ночь в ВНИ по городам" />
     <MESSAGE value="Добавил NOW() AT TIME ZONE 'Europe/Athens'" />
     <MESSAGE value="Добавил Выгрузка гугл таблиц(Workers_city_role и График работ) в БД для ЗП и alarms_5" />
-    <option name="LAST_COMMIT_MESSAGE" value="Добавил Выгрузка гугл таблиц(Workers_city_role и График работ) в БД для ЗП и alarms_5" />
+    <MESSAGE value="Добавил t_bike_history_last_of_day" />
+    <option name="LAST_COMMIT_MESSAGE" value="Добавил t_bike_history_last_of_day" />
   </component>
 </project>

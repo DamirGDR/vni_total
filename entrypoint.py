@@ -161,6 +161,7 @@ def main():
                 FROM shamri.t_bike_use
             LEFT JOIN shamri.t_payment_details tpd ON t_bike_use.id = tpd.ride_id 
             WHERE t_bike_use.ride_status!=5 AND DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') >= '2024-07-21'
+                AND t_bike_use.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
             GROUP BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d')
         ),
         sum_uspeh_abon AS(
@@ -169,6 +170,7 @@ def main():
                 sum(IFNULL(t_trade.amount,0)) AS vyruchka_s_abonementov
             FROM t_trade
             WHERE t_trade.`type` = 6 AND t_trade.status = 1
+                AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
             GROUP BY start_time
             ),
         sum_mnogor_abon AS (
@@ -177,6 +179,7 @@ def main():
                 sum(IFNULL(t_subscription.price,0)) AS sum_mnogor_abon
             FROM t_subscription_mapping
             LEFT JOIN t_subscription ON t_subscription_mapping.subscription_id = t_subscription.id
+                AND t_subscription_mapping.user_id NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
             GROUP BY DATE_FORMAT(t_subscription_mapping.start_time, '%Y-%m-%d')
         ),
         kvt AS (
@@ -205,6 +208,7 @@ def main():
                 SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'vyruchka_v_statuse_1'
             FROM t_trade
             WHERE t_trade.status=1 AND t_trade.way=26 AND t_trade.`type` IN (1,2,6,7)
+                AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
             GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
             ) AS vyruchka_v_statuse_1
         LEFT JOIN 	
@@ -213,6 +217,7 @@ def main():
                 SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'vozvraty'
              FROM t_trade
              WHERE t_trade.status=4 AND t_trade.way=26
+                AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
              GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
         ) AS vozvraty ON vyruchka_v_statuse_1.start_time=vozvraty.start_time
         LEFT JOIN 
@@ -221,6 +226,7 @@ def main():
                 SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'stripe_1'
              FROM t_trade
              WHERE t_trade.status=1 AND t_trade.way=6
+                AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
              GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
             ) AS stripe_1 ON vyruchka_v_statuse_1.start_time=stripe_1.start_time
         LEFT JOIN 
@@ -229,6 +235,7 @@ def main():
                 SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'stripe_4'
              FROM t_trade
              WHERE t_trade.status=4 AND t_trade.way=6
+                AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
              GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
             ) AS stripe_4 ON vyruchka_v_statuse_1.start_time=stripe_4.start_time
         LEFT JOIN 
@@ -238,6 +245,7 @@ def main():
                 SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'chastichno_vozvrascheny'
             FROM t_trade
             WHERE t_trade.status=3
+                AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
             GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
             ) AS chastichno_vozvrascheny ON vyruchka_v_statuse_1.start_time = chastichno_vozvrascheny.start_time
         ),
@@ -282,6 +290,7 @@ def main():
                     t_bike_use.*
                 FROM t_bike_use
                 WHERE t_bike_use.ride_status = 2
+                    AND t_bike_use.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                 ORDER BY t_bike_use.id DESC
             ) AS dolgovye_poezdki
             ON t_payment_details.user_id = dolgovye_poezdki.uid AND t_payment_details.ride_id = dolgovye_poezdki.id
