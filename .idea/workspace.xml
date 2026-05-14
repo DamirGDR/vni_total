@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="Добавил t_bike_history_last_of_day">
+    <list default="true" id="94b93d2a-8b8f-40e7-834e-4cd5b0842254" name="Changes" comment="Исключил работников из расчетов ВНИ общий">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/entrypoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/entrypoint.py" afterDir="false" />
     </list>
@@ -398,7 +398,15 @@
       <option name="project" value="LOCAL" />
       <updated>1776417310014</updated>
     </task>
-    <option name="localTasksCounter" value="40" />
+    <task id="LOCAL-00040" summary="Исключил работников из расчетов ВНИ общий">
+      <option name="closed" value="true" />
+      <created>1778766838971</created>
+      <option name="number" value="00040" />
+      <option name="presentableId" value="LOCAL-00040" />
+      <option name="project" value="LOCAL" />
+      <updated>1778766838971</updated>
+    </task>
+    <option name="localTasksCounter" value="41" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -427,7 +435,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Отладка АКБ" />
     <MESSAGE value="Исправление Total_cities и складов" />
     <MESSAGE value="Исправление 1" />
     <MESSAGE value="Исправление 2" />
@@ -452,6 +459,7 @@
     <MESSAGE value="Добавил NOW() AT TIME ZONE 'Europe/Athens'" />
     <MESSAGE value="Добавил Выгрузка гугл таблиц(Workers_city_role и График работ) в БД для ЗП и alarms_5" />
     <MESSAGE value="Добавил t_bike_history_last_of_day" />
-    <option name="LAST_COMMIT_MESSAGE" value="Добавил t_bike_history_last_of_day" />
+    <MESSAGE value="Исключил работников из расчетов ВНИ общий" />
+    <option name="LAST_COMMIT_MESSAGE" value="Исключил работников из расчетов ВНИ общий" />
   </component>
 </project>

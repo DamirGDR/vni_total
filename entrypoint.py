@@ -386,6 +386,8 @@ def main():
                     t_bike_use.ride_status!=5 
                     AND 
                     DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') >= '2024-07-21'
+                    AND t_bike_use.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
+                    AND t_payment_details.user_id NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                     GROUP BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d'), t_bike.city_id
                 ) AS three_left_cols
             ORDER BY three_left_cols.start_time DESC
@@ -417,6 +419,7 @@ def main():
                     LEFT JOIN t_bike ON t_bike_use.bid = t_bike.id
                     WHERE t_bike_use.ride_status!=5 
                         AND DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') >= '2024-07-21'
+                        AND t_bike_use.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                     GROUP BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d'), t_bike.city_id
                     ORDER BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') DESC
                     ) 
@@ -430,7 +433,8 @@ def main():
                 FROM shamri.t_trade
                 WHERE t_trade.`type` = 6 
                     AND t_trade.status = 1 
-                     AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
+                    AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
+                    AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                 GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
                 ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC
             ) AS sum_uspeh_abon
@@ -462,6 +466,7 @@ def main():
                 LEFT JOIN t_bike ON t_bike_use.bid = t_bike.id
                 WHERE t_bike_use.ride_status!=5 
                     AND DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') >= '2024-07-21'
+                    AND t_bike_use.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                 GROUP BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d'), t_bike.city_id
                 ORDER BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') DESC) 
                 AS distr_poezdki_po_gorodam
@@ -474,6 +479,7 @@ def main():
                 FROM t_subscription_mapping
                 LEFT JOIN t_subscription ON t_subscription_mapping.subscription_id = t_subscription.id
                 WHERE DATE_FORMAT(t_subscription_mapping.start_time, '%Y-%m-%d') >= '2024-07-21'
+                    AND t_subscription_mapping.user_id NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094) 
                 GROUP BY DATE_FORMAT(t_subscription_mapping.start_time, '%Y-%m-%d')
                 ORDER BY DATE_FORMAT(t_subscription_mapping.start_time, '%Y-%m-%d') DESC
                 ) AS sum_mnogor_abon
@@ -509,6 +515,7 @@ def main():
                     AND t_trade.way=26 
                     AND t_trade.`type` IN (1,2,6,7)
                     AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
+                    AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                 GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
                 ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC, t_trade.city_id DESC
                 ) AS vyruchka_uspeh_payTabs
@@ -521,6 +528,7 @@ def main():
                 FROM t_trade
                 WHERE t_trade.status=3
                     AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
+                    AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                 GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
                 ) AS chastichno_vozvrascheny ON vyruchka_uspeh_payTabs.start_time = chastichno_vozvrascheny.start_time AND vyruchka_uspeh_payTabs.city_id = chastichno_vozvrascheny.city_id
         ),
@@ -549,6 +557,7 @@ def main():
                         AND t_trade.way=26 
                         AND t_trade.`type` IN (1,2,6,7) 
                         AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21' 
+                        AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                     GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
                     ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC, t_trade.city_id DESC) AS vyruchka_uspeh_payTabs
                 LEFT JOIN 
@@ -560,6 +569,7 @@ def main():
                     FROM t_trade
                     WHERE t_trade.status=3
                         AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
+                        AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                     GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
                     ) AS chastichno_vozvrascheny ON vyruchka_uspeh_payTabs.start_time = chastichno_vozvrascheny.start_time AND vyruchka_uspeh_payTabs.city_id = chastichno_vozvrascheny.city_id
                     )
@@ -580,6 +590,7 @@ def main():
                 WHERE t_trade.status=4 
                      AND t_trade.way=26 
                      AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
+                     AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                 GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
                 ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade
          ),
@@ -603,6 +614,7 @@ def main():
                     WHERE t_trade.status=4 
                          AND t_trade.way=26 
                          AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
+                         AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                     GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
                     ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade) AS vozvraty_payTabs
          ),
@@ -621,6 +633,7 @@ def main():
                 WHERE t_trade.status=1 
                      AND t_trade.way=6 
                      AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') > '2024-07-21'
+                     AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                 GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
                 ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade
          ),
@@ -645,6 +658,7 @@ def main():
                     WHERE t_trade.status=1 
                          AND t_trade.way=6 
                          AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
+                         AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                     GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
                     ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade) 
                 AS uspeh_Stripe
@@ -665,6 +679,7 @@ def main():
                  WHERE t_trade.status=4 
                      AND t_trade.way=6 
                      AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
+                     AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                  GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
                  ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade
          ),
@@ -688,6 +703,7 @@ def main():
                      WHERE t_trade.status=4 
                          AND t_trade.way=6 
                          AND DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') >= '2024-07-21'
+                         AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                      GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d'), t_trade.city_id
                      ORDER BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') DESC) AS trade)
                 AS vozvraty_Stripe
@@ -779,6 +795,7 @@ def main():
                             ) AS dolgovye_poezdki
                 ON t_payment_details.user_id = dolgovye_poezdki.uid AND t_payment_details.ride_id = dolgovye_poezdki.id
                 WHERE DATE_FORMAT(t_payment_details.created, '%Y-%m-%d') >= '2024-07-21'
+                    AND t_payment_details.user_id NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                 GROUP BY DATE_FORMAT(t_payment_details.created, '%Y-%m-%d'), dolgovye_poezdki.city_id
                 ORDER BY DATE_FORMAT(t_payment_details.created, '%Y-%m-%d') DESC
                 ) AS dolgi
@@ -2737,6 +2754,7 @@ def main():
                             to_timestamp(tbu.start_time) >= '2024-07-21'
                             AND 
                             tbu.ride_status!=5
+                            AND tbu.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                         GROUP BY tb.id, tb.release_time, tb.model, tb."number", tc."name"
                     ) AS rides ON tb_all.id = rides.id 
             LEFT JOIN damir.t_city tc ON tb_all.city_id = tc.id
@@ -2775,6 +2793,7 @@ def main():
                             to_timestamp(tbu.start_time) >= '2024-07-21'
                             AND 
                             tbu.ride_status!=5
+                            AND tbu.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                         GROUP BY tb.id, tb.release_time, tb.model, tb."number", tc."name"
                     ) AS rides ON tb_all.id = rides.id 
             LEFT JOIN damir.t_city tc ON tb_all.city_id = tc.id
@@ -2915,6 +2934,7 @@ def main():
                             to_timestamp(tbu.start_time) >= '2024-07-21'
                             AND 
                             tbu.ride_status!=5
+                            AND tbu.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                         GROUP BY tb.id, tb.release_time, tb.model, tb."number", tc."name"
                     ) AS rides ON tb_all.id = rides.id 
             LEFT JOIN damir.t_city tc ON tb_all.city_id = tc.id
@@ -3130,6 +3150,7 @@ def main():
         CROSS JOIN damir.t_area ta 
         WHERE tbu.ride_status != 5
             AND ta.active = 1
+            AND tbu.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
             AND tbu.id > {max_id_order}
             )
     SELECT 
@@ -3273,6 +3294,7 @@ def main():
             CROSS JOIN damir.t_area ta 
             WHERE tbu.ride_status != 5
                 AND ta.active = 1
+                AND tbu.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                 AND tbu.id > {max_id_order}
                 )
         SELECT 
@@ -3389,6 +3411,7 @@ def main():
             tbu.end_lng 
         FROM damir.t_bike_use tbu 
         WHERE tbu.ride_status != 5
+            AND tbu.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
             AND tbu.id > {max_id_order}
             '''.format(max_id_order=max_id_order)
 
@@ -3542,7 +3565,9 @@ def main():
         WHERE tb.id NOT IN (SELECT 
                                 tbu.bid 
                             FROM damir.t_bike_use tbu 
-                            WHERE tbu.ride_status!=5 AND to_timestamp(tbu."date") >= NOW() - INTERVAL '1 days')
+                            WHERE tbu.ride_status!=5 
+                                AND tbu.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
+                                AND to_timestamp(tbu."date") >= NOW() - INTERVAL '1 days')
                 AND 
                 tb.error_status IN (0, 7)
         GROUP BY tb.city_id
@@ -3555,7 +3580,9 @@ def main():
         WHERE tb.id NOT IN (SELECT 
                                 tbu.bid 
                             FROM damir.t_bike_use tbu 
-                            WHERE tbu.ride_status!=5 AND (to_timestamp(tbu."date") >= NOW() - INTERVAL '2 days')
+                            WHERE tbu.ride_status!=5
+                                AND tbu.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094) 
+                                AND (to_timestamp(tbu."date") >= NOW() - INTERVAL '2 days')
                 AND 
                 tb.error_status IN (0, 7)
                             )
@@ -3593,6 +3620,7 @@ def main():
         LEFT JOIN damir.t_bike tb ON tbu.bid = tb.id 
         WHERE tpd.created >= current_date
             AND tpd.bike_discount_amount > 0
+            AND tpd.user_id NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
         GROUP BY tb.city_id
     ),
     uteryany AS (
@@ -3612,7 +3640,9 @@ def main():
         WHERE tb.id NOT IN (SELECT 
                                 tbu.bid 
                             FROM damir.t_bike_use tbu 
-                            WHERE tbu.ride_status!=5 AND to_timestamp(tbu."date") >= current_date - INTERVAL '1 month')
+                            WHERE tbu.ride_status!=5
+                                AND tbu.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094) 
+                                AND to_timestamp(tbu."date") >= current_date - INTERVAL '1 month')
             AND tb.error_status NOT IN (0, 7)
         GROUP BY tb.city_id
     )
@@ -3737,6 +3767,7 @@ def main():
         LEFT JOIN shamri.t_payment_details tpd ON tbu.id = tpd.ride_id
         LEFT JOIN shamri.t_subscription ts ON tbu.subscription_id = ts.id 
         WHERE tbu.ride_status != 5
+             AND tbu.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
              AND 
             from_unixtime(tbu.`date`) >= STR_TO_DATE(DATE_FORMAT(NOW(), '%Y-%m-%d %H:00:00'), "%Y-%m-%d %H:%i:%s") - INTERVAL 2 HOUR
     '''
@@ -3783,6 +3814,7 @@ def main():
                 FROM damir.t_bike_use tbu
                 LEFT JOIN t_bike tb ON tbu.bid = tb.id
                 WHERE tbu.ride_status = 2 
+                    AND tbu.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                     AND to_timestamp( tbu.start_time) >= date_trunc('hour', NOW() AT TIME ZONE 'Europe/Athens') - INTERVAL '2 hours'
                 ) AS dolgi ON tpd.ride_id = dolgi.id 
             ) AS dolgi
@@ -3809,6 +3841,7 @@ def main():
                 FROM damir.t_bike_use
                 LEFT JOIN damir.t_bike ON t_bike_use.bid = t_bike.id
                 WHERE t_bike_use.ride_status != 5 
+                    AND t_bike_use.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                     AND TO_TIMESTAMP(t_bike_use.start_time) >= date_trunc('hour', NOW() AT TIME ZONE 'Europe/Athens') - INTERVAL '2 hours'
                 GROUP BY 1, 2
                 ) 
@@ -3821,6 +3854,7 @@ def main():
             FROM damir.t_trade
             WHERE t_trade.type = 6 
                 AND t_trade.status = 1 
+                AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                 AND t_trade.date >= date_trunc('hour', NOW() AT TIME ZONE 'Europe/Athens') - INTERVAL '2 hours'
             GROUP BY 1
             ) AS sum_uspeh_abon
@@ -3845,6 +3879,7 @@ def main():
                 FROM damir.t_bike_use
                 LEFT JOIN damir.t_bike ON t_bike_use.bid = t_bike.id
                 WHERE t_bike_use.ride_status != 5 
+                    AND t_bike_use.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                     AND TO_TIMESTAMP(t_bike_use.start_time) >= date_trunc('hour', NOW() AT TIME ZONE 'Europe/Athens') - INTERVAL '2 hours'
                 GROUP BY 1, 2
             ) AS dp
@@ -3857,6 +3892,7 @@ def main():
             LEFT JOIN damir.t_subscription ON t_subscription_mapping.subscription_id = t_subscription.id
             WHERE 
                 t_subscription_mapping.start_time >= date_trunc('hour', NOW() AT TIME ZONE 'Europe/Athens') - INTERVAL '2 hours'
+                AND t_subscription_mapping.user_id NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
             GROUP BY 1
         ) AS sum_mnogor_abon
         ON distr_poezdki_po_gorodam.start_time = sum_mnogor_abon.start_time
@@ -3948,6 +3984,7 @@ def main():
                 FROM damir.t_bike_use tbu
                 LEFT JOIN t_bike tb ON tbu.bid = tb.id
                 WHERE tbu.ride_status = 2 
+                    AND tbu.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                     AND to_timestamp( tbu.start_time) >= date_trunc('hour', NOW() AT TIME ZONE 'Europe/Athens') - INTERVAL '2 hours'
                 ) AS dolgi ON tpd.ride_id = dolgi.id 
             ) AS dolgi
@@ -3973,6 +4010,7 @@ def main():
                 FROM damir.t_bike_use
                 LEFT JOIN damir.t_bike ON t_bike_use.bid = t_bike.id
                 WHERE t_bike_use.ride_status != 5 
+                    AND t_bike_use.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                     AND TO_TIMESTAMP(t_bike_use.start_time) >= date_trunc('hour', NOW() AT TIME ZONE 'Europe/Athens') - INTERVAL '2 hours'
                 GROUP BY 1, 2
                 ) 
@@ -3985,6 +4023,7 @@ def main():
             FROM damir.t_trade
             WHERE t_trade.type = 6 
                 AND t_trade.status = 1 
+                AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                 AND t_trade.date >= date_trunc('hour', NOW() AT TIME ZONE 'Europe/Athens') - INTERVAL '2 hours'
             GROUP BY 1
             ) AS sum_uspeh_abon
@@ -4009,6 +4048,7 @@ def main():
                 FROM damir.t_bike_use
                 LEFT JOIN damir.t_bike ON t_bike_use.bid = t_bike.id
                 WHERE t_bike_use.ride_status != 5 
+                    AND t_bike_use.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                     AND TO_TIMESTAMP(t_bike_use.start_time) >= date_trunc('hour', NOW() AT TIME ZONE 'Europe/Athens') - INTERVAL '2 hours'
                 GROUP BY 1, 2
             ) AS dp
@@ -4021,6 +4061,7 @@ def main():
             LEFT JOIN damir.t_subscription ON t_subscription_mapping.subscription_id = t_subscription.id
             WHERE 
                 t_subscription_mapping.start_time >= date_trunc('hour', NOW() AT TIME ZONE 'Europe/Athens') - INTERVAL '2 hours'
+                AND t_subscription_mapping.user_id NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094) 
             GROUP BY 1
         ) AS sum_mnogor_abon
         ON distr_poezdki_po_gorodam.start_time = sum_mnogor_abon.start_time
