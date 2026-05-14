@@ -387,7 +387,7 @@ def main():
                     AND 
                     DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d') >= '2024-07-21'
                     AND t_bike_use.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
-                    AND t_payment_details.user_id NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
+                    AND tpd.user_id NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
                     GROUP BY DATE_FORMAT(FROM_UNIXTIME(t_bike_use.start_time), '%Y-%m-%d'), t_bike.city_id
                 ) AS three_left_cols
             ORDER BY three_left_cols.start_time DESC
