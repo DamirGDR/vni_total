@@ -3020,7 +3020,7 @@ def main():
             ta.radius AS radius ,
             IFNULL(ta.address, '0') AS address ,
             ta.active AS active ,
-            IFNULL(ta.user_group_id, 0) AS user_group_id ,
+            IFNULL(ta.customer_group_id, 0) AS user_group_id ,
             ta.bonus_type AS bonus_type ,
             ta.bonus_value AS bonus_value
         FROM shamri.t_area ta
