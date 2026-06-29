@@ -1244,11 +1244,11 @@ def main():
                         (SELECT
                             t_bike.city_id,
                             t_bike.model,
-                            t_bike.user_group_id,
+                            t_bike.customer_group_id AS user_group_id,
                             COUNT(t_bike.id) AS spisannye
                         FROM t_bike
-                        WHERE t_bike.user_group_id IS NOT NULL
-                        GROUP BY t_bike.city_id, t_bike.model, t_bike.user_group_id
+                        WHERE t_bike.customer_group_id IS NOT NULL
+                        GROUP BY t_bike.city_id, t_bike.model, t_bike.customer_group_id
                         ) AS spisannye) AS spisannye
                 GROUP BY spisannye.name
                 UNION 
@@ -1260,7 +1260,7 @@ def main():
                         t_bike.model AS name,
                         COUNT(t_bike.id) AS spisannye
                     FROM t_bike
-                    WHERE t_bike.user_group_id IS NOT NULL 
+                    WHERE t_bike.customer_group_id IS NOT NULL 
                         GROUP BY t_bike.model) AS total
             '''
         df_spisannye = pd.read_sql(select_spisannye, engine_mysql)
@@ -1610,7 +1610,7 @@ def main():
             IFNULL(t_bike.last_service_time, STR_TO_DATE("2024-01-01 00:00:00", "%Y-%m-%d %H:%i:%s")) AS last_service_time,
             IFNULL(t_bike.industry_id,0) AS industry_id,
             IFNULL(t_bike.ble_key,'empty') AS ble_key,
-            IFNULL(t_bike.user_group_id,0) AS user_group_id 
+            IFNULL(t_bike.customer_group_id,0) AS user_group_id 
        FROM shamri.t_bike
     '''
     df_t_bike = pd.read_sql(select_df_t_bike, engine_mysql)
@@ -1741,7 +1741,7 @@ def main():
         IFNULL(t_bike.last_service_time, STR_TO_DATE("2024-01-01 00:00:00", "%Y-%m-%d %H:%i:%s")) AS last_service_time,
         IFNULL(t_bike.industry_id,0) AS industry_id,
         IFNULL(t_bike.ble_key,'empty') AS ble_key,
-        IFNULL(t_bike.user_group_id,0) AS user_group_id FROM shamri.t_bike
+        IFNULL(t_bike.customer_group_id,0) AS user_group_id FROM shamri.t_bike
 	'''
     df_t_bike = pd.read_sql(select_t_bike, engine_mysql)
 
