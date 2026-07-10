@@ -196,18 +196,23 @@ def main():
             vyruchka_v_statuse_1.start_time,
             vyruchka_v_statuse_1.vyruchka_v_statuse_1,
             IFNULL(vozvraty.vozvraty,0) AS 'vozvraty', 
-            chastichno_vozvrascheny.chastichno_vozvrascheny AS 'chastichno_vozvrascheny',
-            IFNULL(vyruchka_v_statuse_1.vyruchka_v_statuse_1,0) + IFNULL(chastichno_vozvrascheny.chastichno_vozvrascheny,0) AS 'vyruchka_payTabs',
+            IFNULL(chastichno_vozvrascheny_payTabs.chastichno_vozvrascheny_payTabs,0) AS 'chastichno_vozvrascheny_payTabs',
+            IFNULL(vyruchka_v_statuse_1.vyruchka_v_statuse_1,0)
+                + IFNULL(chastichno_vozvrascheny_payTabs.chastichno_vozvrascheny_payTabs,0)
+                - IFNULL(vozvraty.vozvraty,0) AS 'vyruchka_payTabs',
             IFNULL(stripe_1.stripe_1, 0) AS 'stripe_1',
             IFNULL(stripe_4.stripe_4, 0) AS 'stripe_4',
-            IFNULL(stripe_1.stripe_1, 0) - IFNULL(stripe_4.stripe_4, 0) AS 'vyruchka_stripe'
+            IFNULL(chastichno_vozvrascheny_stripe.chastichno_vozvrascheny_stripe,0) AS 'chastichno_vozvrascheny_stripe',
+            IFNULL(stripe_1.stripe_1, 0)
+                + IFNULL(chastichno_vozvrascheny_stripe.chastichno_vozvrascheny_stripe,0)
+                - IFNULL(stripe_4.stripe_4, 0) AS 'vyruchka_stripe'
         FROM 
             (
             SELECT 
                 DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
                 SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'vyruchka_v_statuse_1'
             FROM t_trade
-            WHERE t_trade.status=1 AND t_trade.way=26 AND t_trade.`type` IN (1,2,6,7)
+            WHERE t_trade.status=1 AND t_trade.way=26 AND t_trade.`type` IN (1,2,6,7,8)
                 AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
             GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
             ) AS vyruchka_v_statuse_1
@@ -216,7 +221,7 @@ def main():
                 DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
                 SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'vozvraty'
              FROM t_trade
-             WHERE t_trade.status=4 AND t_trade.way=26
+             WHERE t_trade.status=4 AND t_trade.way=26 AND t_trade.`type` != 8
                 AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
              GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
         ) AS vozvraty ON vyruchka_v_statuse_1.start_time=vozvraty.start_time
@@ -234,7 +239,7 @@ def main():
                     DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
                 SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'stripe_4'
              FROM t_trade
-             WHERE t_trade.status=4 AND t_trade.way=6
+             WHERE t_trade.status=4 AND t_trade.way=6 AND t_trade.`type` != 8
                 AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
              GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
             ) AS stripe_4 ON vyruchka_v_statuse_1.start_time=stripe_4.start_time
@@ -242,12 +247,22 @@ def main():
             (
             SELECT 
                 DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
-                SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'chastichno_vozvrascheny'
+                SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'chastichno_vozvrascheny_payTabs'
             FROM t_trade
-            WHERE t_trade.status=3
+            WHERE t_trade.status=3 AND t_trade.way=26
                 AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
             GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
-            ) AS chastichno_vozvrascheny ON vyruchka_v_statuse_1.start_time = chastichno_vozvrascheny.start_time
+            ) AS chastichno_vozvrascheny_payTabs ON vyruchka_v_statuse_1.start_time = chastichno_vozvrascheny_payTabs.start_time
+        LEFT JOIN 
+            (
+            SELECT 
+                DATE_FORMAT(t_trade.`date`, '%Y-%m-%d') AS start_time,
+                SUM(IFNULL(t_trade.account_pay_amount,0)) AS 'chastichno_vozvrascheny_stripe'
+            FROM t_trade
+            WHERE t_trade.status=3 AND t_trade.way=6
+                AND t_trade.uid NOT IN (52536,58249,72860,37592,63824,49704,54187,70354,70408,49618,72907,70404,44902,45094)
+            GROUP BY DATE_FORMAT(t_trade.`date`, '%Y-%m-%d')
+            ) AS chastichno_vozvrascheny_stripe ON vyruchka_v_statuse_1.start_time = chastichno_vozvrascheny_stripe.start_time
         ),
         user_v_den_register AS (
         SELECT 
@@ -314,16 +329,11 @@ def main():
             IFNULL(three_left_cols.obzchaya_stoimost,0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) - IFNULL(three_left_cols.oplacheno_bonusami,0) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(three_left_cols.skidka,0) AS 'vyruchka_bez_bonusov_vyruchka_s_abonementov',
             SUM(IFNULL(three_left_cols.obzchaya_stoimost, 0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'vni',
             SUM(IFNULL(three_left_cols.obzchaya_stoimost, 0) - IFNULL(dolgi.dolgi,0) - (IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(sum_mnogor_abon.sum_mnogor_abon,0)) + IFNULL(sum_uspeh_abon.vyruchka_s_abonementov,0) - IFNULL(three_left_cols.skidka,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) - SUM(IFNULL(three_left_cols.oplacheno_bonusami,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'vni_bez_bonusov',
-            -- vyruchka_payTabs_stripe.vyruchka_v_statuse_1,
-            -- vyruchka_payTabs_stripe.vozvraty,
-            -- vyruchka_payTabs_stripe.chastichno_vozvrascheny,
-            -- IFNULL(vyruchka_payTabs_stripe.vyruchka_v_statuse_1,0) - IFNULL(vyruchka_payTabs_stripe.vozvraty,0) AS 'vyruchka PayTabs_возвраты',
-            -- SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_v_statuse_1,0) - IFNULL(vyruchka_payTabs_stripe.vozvraty,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'obsch_PayTabs_возвраты',
-            IFNULL(vyruchka_payTabs_stripe.vyruchka_v_statuse_1,0) + IFNULL(vyruchka_payTabs_stripe.chastichno_vozvrascheny,0) AS 'vyruchka PayTabs',
-            SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_v_statuse_1,0) + IFNULL(vyruchka_payTabs_stripe.chastichno_vozvrascheny,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'obsch_PayTabs',
+            IFNULL(vyruchka_payTabs_stripe.vyruchka_payTabs,0) AS 'vyruchka PayTabs',
+            SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_payTabs,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'obsch_PayTabs',
             IFNULL(vyruchka_payTabs_stripe.vyruchka_stripe,0) AS 'vyruchka_Stripe',
             SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_stripe,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'obsch_Stripe',
-            SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_payTabs,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) + SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_stripe,0) + IFNULL(vyruchka_payTabs_stripe.chastichno_vozvrascheny,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'obsch_PayTabs_i_obsch_Stripe',
+            SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_payTabs,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) + SUM(IFNULL(vyruchka_payTabs_stripe.vyruchka_stripe,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'obsch_PayTabs_i_obsch_Stripe',
             IFNULL(kvt.kvt,0) AS 'kvt',
             IFNULL(user_v_den_register.user_v_den_register,0) AS 'user_v_den',
             SUM(IFNULL(user_v_den_register.user_v_den_register,0)) OVER (ORDER BY DATE(three_left_cols.start_time)) AS 'user_v_den_obshc',
