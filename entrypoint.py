@@ -4339,7 +4339,7 @@ def main():
     try:
         SERVICE_ACCOUNT_FILE = './google_json.json'
         SPREADSHEET_ID = '1dSOV9X2FV3mnOmnwWvTMJuCCZ-tVBf64DP90k3EYD90'
-        RANGE_NAME = 'График работ!A:L'
+        RANGE_NAME = 'График работ!A:P'
         service_account_file = generated_json_file
 
         df_grafik = read_sheet_data_to_pandas(sheets_service, SPREADSHEET_ID, RANGE_NAME)
@@ -4355,6 +4355,11 @@ def main():
         df_grafik['Finish odometer kilometers'] = df_grafik['Finish odometer kilometers'].fillna('0').replace('', '0')
         df_grafik['Fines (euro)'] = df_grafik['Fines (euro)'].fillna('0').replace('', '0')
         df_grafik['Note'] = df_grafik['Note'].fillna('0').replace('', '0')
+        df_grafik = df_grafik.drop(
+            columns=[c for c in (
+                'Road start time', 'Road finish time', 'Road start km', 'Road finish km',
+            ) if c in df_grafik.columns],
+        )
         df_grafik['add_time'] = pd.Timestamp.now() + pd.Timedelta(hours=3)
 
         # Очистка таблицы
@@ -4381,7 +4386,7 @@ def main():
         # Расчет зп. Начало 30.09.2025
         SERVICE_ACCOUNT_FILE = './google_json.json'
         SPREADSHEET_ID = '1dSOV9X2FV3mnOmnwWvTMJuCCZ-tVBf64DP90k3EYD90'
-        RANGE_NAME = 'График работ!A:L'
+        RANGE_NAME = 'График работ!A:P'
         service_account_file = generated_json_file
 
         sheets_service = get_sheets_service(SERVICE_ACCOUNT_FILE)
