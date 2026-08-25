@@ -4335,11 +4335,13 @@ def main():
         print(f"Произошла ошибка в workers_city_role: {e}")
         pass
 
+    df_intercity_trips = pd.DataFrame(columns=['Date', 'Worker id'])
+
     # Выгрузка График работ из гугла
     try:
         SERVICE_ACCOUNT_FILE = './google_json.json'
         SPREADSHEET_ID = '1dSOV9X2FV3mnOmnwWvTMJuCCZ-tVBf64DP90k3EYD90'
-        RANGE_NAME = 'График работ!A:P'
+        RANGE_NAME = 'График работ!A:Q'
         service_account_file = generated_json_file
 
         df_grafik = read_sheet_data_to_pandas(sheets_service, SPREADSHEET_ID, RANGE_NAME)
@@ -4355,8 +4357,20 @@ def main():
         df_grafik['Finish odometer kilometers'] = df_grafik['Finish odometer kilometers'].fillna('0').replace('', '0')
         df_grafik['Fines (euro)'] = df_grafik['Fines (euro)'].fillna('0').replace('', '0')
         df_grafik['Note'] = df_grafik['Note'].fillna('0').replace('', '0')
+        if 'Intercity trip city' in df_grafik.columns:
+            city = df_grafik['Intercity trip city'].astype(str).str.strip()
+            empty = {'', '0', 'nan', 'none', 'nat', '#n/a'}
+            trips = df_grafik.loc[
+                ~city.str.lower().isin(empty),
+                ['Date', 'Worker id'],
+            ].copy()
+            trips['Date'] = pd.to_datetime(trips['Date'], errors='coerce')
+            trips['Worker id'] = pd.to_numeric(trips['Worker id'], errors='coerce')
+            df_intercity_trips = trips.dropna().drop_duplicates()
+            df_intercity_trips = df_intercity_trips[df_intercity_trips['Worker id'] > 0]
         df_grafik = df_grafik.drop(
             columns=[c for c in (
+                'Intercity trip city',
                 'Road start time', 'Road finish time', 'Road start km', 'Road finish km',
             ) if c in df_grafik.columns],
         )
@@ -4386,7 +4400,7 @@ def main():
         # Расчет зп. Начало 30.09.2025
         SERVICE_ACCOUNT_FILE = './google_json.json'
         SPREADSHEET_ID = '1dSOV9X2FV3mnOmnwWvTMJuCCZ-tVBf64DP90k3EYD90'
-        RANGE_NAME = 'График работ!A:P'
+        RANGE_NAME = 'График работ!A:Q'
         service_account_file = generated_json_file
 
         sheets_service = get_sheets_service(SERVICE_ACCOUNT_FILE)
@@ -4691,6 +4705,26 @@ def main():
                 res.loc[(res['Worker id'] == df_vyezd.loc[index]['Worker id']) & \
                         (res['Date'] == df_vyezd.loc[index]['Дата выезда5']), 'Ставка за час'] = \
                     float(df_vyezd.loc[index]['Ставка за выезд в другие города'])
+
+        # Выезды из «График работ»: любой непустой Intercity trip city — ставка BA на всю смену.
+        if not df_intercity_trips.empty:
+            trips = df_intercity_trips.copy()
+            trips['Worker id'] = trips['Worker id'].astype(int)
+            trips['Date'] = pd.to_datetime(trips['Date'])
+            trips = trips[trips['Worker id'] > 0]
+            trips['Месяц'] = trips['Date'].dt.to_period('M').dt.to_timestamp()
+            trip_rates = trips.merge(
+                df_vyezd[['Месяц', 'Worker id', 'Ставка за выезд в другие города']],
+                on=['Месяц', 'Worker id'],
+                how='left',
+            )
+            trip_rates = trip_rates.dropna(subset=['Ставка за выезд в другие города'])
+            trip_rates = trip_rates[trip_rates['Ставка за выезд в другие города'] != 0]
+            for _, trip_row in trip_rates.iterrows():
+                res.loc[
+                    (res['Worker id'] == trip_row['Worker id']) & (res['Date'] == trip_row['Date']),
+                    'Ставка за час',
+                ] = float(trip_row['Ставка за выезд в другие города'])
 
         res = df_for_workers.merge(res, on=['Месяц', 'Date', 'Worker id', 'Worker username', 'Worker nickname'], how='left')
         res['Сдельная зп'] = res['Ставка за час'] * res['Actual working seconds'] / 3600
