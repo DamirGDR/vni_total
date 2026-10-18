@@ -8,6 +8,7 @@ import google.oauth2.service_account
 import googleapiclient.discovery
 import datetime
 import polyline
+from road_fuel_km import add_road_km_to_distance, monthly_road_km
 from shapely.geometry import Point, Polygon
 
 
@@ -4336,6 +4337,7 @@ def main():
         pass
 
     df_intercity_trips = pd.DataFrame(columns=['Date', 'Worker id'])
+    df_road_km = monthly_road_km(None)
 
     # Выгрузка График работ из гугла
     try:
@@ -4368,6 +4370,7 @@ def main():
             trips['Worker id'] = pd.to_numeric(trips['Worker id'], errors='coerce')
             df_intercity_trips = trips.dropna().drop_duplicates()
             df_intercity_trips = df_intercity_trips[df_intercity_trips['Worker id'] > 0]
+        df_road_km = monthly_road_km(df_grafik)
         df_grafik = df_grafik.drop(
             columns=[c for c in (
                 'Intercity trip city',
@@ -4494,6 +4497,9 @@ def main():
         df_for_workers_distance = df_for_workers.groupby(['Месяц', 'Worker id', 'Worker username', 'Worker nickname'],
                                                          as_index=False) \
             .agg({'distance': 'sum'})
+        df_for_workers_distance = add_road_km_to_distance(
+            df_for_workers_distance, df_road_km
+        )
 
         df_temp = df_tabl_stavki.merge(df_for_workers_distance,
                                        how='left', on=['Месяц', 'Worker id', 'Worker username', 'Worker nickname'])
