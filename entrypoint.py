@@ -30,6 +30,37 @@ def get_google_creds() -> str:
     return url
 
 
+_SHEET_DATE_EPOCH = datetime.date(1899, 12, 30)
+
+
+def normalize_sheet_date(value):
+    """Google Sheets date serial (days since 1899-12-30) to YYYY-MM-DD. ISO strings pass through."""
+    if value is None or value == "":
+        return value
+    if isinstance(value, float) and pd.isna(value):
+        return value
+    text = str(value).strip()
+    number = text[:-2] if text.endswith(".0") else text
+    if not number.isdigit():
+        return text
+    return (_SHEET_DATE_EPOCH + datetime.timedelta(days=int(number))).isoformat()
+
+
+def repair_stored_sheet_dates(engine) -> int:
+    """Rows already loaded as serial text. Checkups reads the table before the next sheet load."""
+    statement = sa.text(
+        r"""
+        UPDATE damir.grafik_rabot_google
+        SET "Date" = (DATE '1899-12-30' + "Date"::numeric::int)::text
+        WHERE "Date" ~ '^[0-9]+(\.0+)?$'
+        """
+    )
+    with engine.connect() as connection:
+        with connection.begin():
+            result = connection.execute(statement)
+            return result.rowcount or 0
+
+
 def read_sheet_data_to_pandas(service, spreadsheet_id: str, range_name: str):
     """
     Читает данные из Google Таблицы по указанному диапазону и преобразует их в Pandas DataFrame.
@@ -2709,6 +2740,10 @@ def main():
         x=df_fresh_t_audit_user_location_mysql.shape[0]))
     #   Обновление таблицы t_audit_user_location в Postgres. Конец
 
+    repaired_dates = repair_stored_sheet_dates(engine_postgresql)
+    if repaired_dates:
+        print(f"grafik_rabot_google: repaired {repaired_dates} serial dates")
+
     # История чекапов. Начало
     select_checkups_history = r'''
         WITH work_tab AS (
@@ -4347,6 +4382,7 @@ def main():
         service_account_file = generated_json_file
 
         df_grafik = read_sheet_data_to_pandas(sheets_service, SPREADSHEET_ID, RANGE_NAME)
+        df_grafik['Date'] = df_grafik['Date'].map(normalize_sheet_date)
 
         df_grafik['Worker id'] = df_grafik['Worker id'].fillna('0').replace('', '0')
         df_grafik['Worker username'] = df_grafik['Worker username'].fillna('0').replace('#N/A', '0').replace('', '0')
